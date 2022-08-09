@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <script src="../dist/umd/index.js"></script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script>
+      const { reactive, watch, ref, effect, toRefs, proxyRefs, computed } =
+        Reactive;
+
+      const a = ref("张");
+      const b = ref("三");
+
+      const data = proxyRefs({ a, b });
+
+      const fullName = computed(() => data.a + ":" + data.b);
+
+      effect(() => {
+        console.log("data.a", data.a);
+        console.log("data.b", data.b);
+      });
+
+      effect(() => {
+        app.innerText = fullName.value;
+      });
+    </script>
+  </body>
+</html>

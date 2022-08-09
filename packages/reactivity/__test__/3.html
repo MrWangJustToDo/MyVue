@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <script src="../dist/umd/index.js"></script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script>
+      const { reactive, watch } = Reactive;
+
+      const data = reactive({ a: 1, b: 2, c: 3 });
+
+      watch(
+        () => data.a,
+        (n, o, onCleanUp) => {
+          let action = true;
+          onCleanUp(() => {
+            action = false;
+          });
+          if (action) {
+            console.log(n, o);
+          }
+        }
+      );
+
+      watch(data, (n, o) => {
+        console.log(n, o);
+      });
+    </script>
+  </body>
+</html>

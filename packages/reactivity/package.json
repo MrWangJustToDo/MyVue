@@ -1,0 +1,42 @@
+{
+  "name": "@my-vue/reactivity",
+  "description": "@my-vue/reactivity",
+  "version": "0.0.1",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    "import": "./dist/esm/index.js",
+    "require": "./dist/cjs/index.js"
+  },
+  "buildOptions": {
+    "input": "./src/index.ts",
+    "output": [
+      {
+        "dir": "./dist",
+        "entryFileNames": "cjs/index.js",
+        "format": "cjs",
+        "sourcemap": true
+      },
+      {
+        "dir": "./dist",
+        "entryFileNames": "esm/index.js",
+        "format": "esm",
+        "sourcemap": true
+      },
+      {
+        "dir": "./dist",
+        "entryFileNames": "umd/index.js",
+        "format": "umd",
+        "name": "Reactive",
+        "sourcemap": true
+      }
+    ]
+  },
+  "dependencies": {
+    "@my-vue/shared": "workspace:*"
+  }
+}

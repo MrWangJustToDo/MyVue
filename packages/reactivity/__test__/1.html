@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <script src="../dist/umd/index.js"></script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script>
+      const { reactive, effect } = Reactive;
+
+      const d = { a: 1, b: 2, c: 3, d: { a: 1, b: 2 } };
+
+      const app = reactive(d);
+
+      effect(() => {
+        console.log("app.d.a", app.d.a);
+        effect(() => {
+          console.log("app.a", app.a);
+        });
+        effect(() => {
+          console.log("app.b", app.b);
+        });
+      });
+
+      const data = reactive({ a: "hello" });
+
+      const f = effect(() => {
+        console.log('run');
+        document.getElementById("app").innerText = data.a;
+      });
+
+      setTimeout(() => {
+        data.a = "大家好";
+      }, 3000);
+    </script>
+  </body>
+</html>

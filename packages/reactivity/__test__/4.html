@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <script src="../dist/umd/index.js"></script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script>
+      const { reactive, watch, ref, effect, toRefs } = Reactive;
+
+      const data = reactive({ a: 1, b: 2, c: 3 });
+
+      const refValue = ref(false);
+
+      effect(() => {
+        if (refValue.value) {
+          console.log(data.a);
+        } else {
+          console.log(data.b);
+        }
+      });
+
+      const { a } = toRefs(data);
+
+      effect(() => {
+        console.log("toRefs", a.value);
+      });
+    </script>
+  </body>
+</html>
