@@ -27,6 +27,8 @@ export class ReactiveEffect {
 
   private entryScope() {
     this._parent = globalEffect;
+    // remove cycle, but how about long list?
+    if (globalEffect?._parent === this) globalEffect._parent = null;
     globalEffect = this;
   }
 

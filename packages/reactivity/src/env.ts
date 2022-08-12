@@ -10,5 +10,19 @@ export const globalReactiveMap = new WeakMap<
   Record<string, unknown>
 >();
 
+export const globalReadOnlyMap = new WeakMap<
+  Record<string, unknown>,
+  Record<string, unknown>
+>();
+
+export const globalShallowReactiveMap = new WeakMap<
+  Record<string, unknown>,
+  Record<string, unknown>
+>();
+
+export const globalShallowReadOnlyMap = new WeakMap<
+  Record<string, unknown>,
+  Record<string, unknown>
+>();
+
 (window as any).__globalDeps__ = globalDepsMap;
-(window as any).__globalReactive__ = globalReactiveMap;

@@ -1,51 +1,117 @@
-import { isObject } from "@my-vue/shared";
+import { isArray, isObject } from "@my-vue/shared";
 
+import { getProxyCacheMap } from "./create";
 import { track, trigger } from "./effect";
-import { isReactive, reactive } from "./reactive";
+import {
+  reactive,
+  isReadonly as isReadOnlyFunction,
+  isShallow as isShallowFunction,
+  toRaw,
+  readonly,
+} from "./reactive";
 import { isRef, unwrapRef } from "./ref";
-import { REACTIVE_KEY } from "./symbol";
+import { REACTIVE_KEY, READONLY_KEY, ROW_KEY, SHALLOW_KEY } from "./symbol";
 
-export const createGetHandler = (shallow = false, needTrack = true) => {
+export const generateProxyHandler = (
+  isShallow = false,
+  isReadOnly = false
+): ProxyHandler<Record<string, unknown>> => {
+  return {
+    get: createGetHandler(isShallow, isReadOnly),
+    set: createSetHandler(isShallow, isReadOnly),
+  };
+};
+
+export const createGetHandler = (isShallow: boolean, isReadOnly: boolean) => {
   return function (
     target: Record<string, unknown>,
     key: string,
     receiver: unknown
   ) {
-    if (key === REACTIVE_KEY) return true;
+    if (key === REACTIVE_KEY) return !isReadOnly;
+    if (key === READONLY_KEY) return isReadOnly;
+    if (key === SHALLOW_KEY) return isShallow;
+    if (
+      key === ROW_KEY &&
+      receiver === getProxyCacheMap(isShallow, isReadOnly).get(target)
+    ) {
+      return target;
+    }
 
-    let res = Reflect.get(target, key, receiver);
+    const res = Reflect.get(target, key, receiver);
 
-    if (needTrack) {
+    /**
+     * TODO: from source code, array function / symbol
+     */
+
+    if (!isReadOnly) {
       track(target, "get", key as string);
     }
 
-    if (!shallow && isObject(res)) res = reactive(res);
+    if (isShallow) {
+      return res;
+    }
+
+    if (isRef(res)) {
+      return res.value;
+    }
+
+    if (isObject(res)) {
+      return isReadOnly ? readonly(res) : reactive(res);
+    }
 
     return res;
   };
 };
 
-export const createSetHandler = (shallow = false, needTrigger = true) => {
+export const createSetHandler = (isShallow: boolean, isReadOnly: boolean) => {
   return function (
     target: Record<string, unknown>,
     key: string,
     value: unknown,
     receiver: unknown
   ) {
-    if (key === REACTIVE_KEY) {
-      throw new Error(`can not set ${REACTIVE_KEY} field for reactive object`);
+    if (
+      key === REACTIVE_KEY ||
+      key === READONLY_KEY ||
+      key === SHALLOW_KEY ||
+      key === ROW_KEY
+    ) {
+      throw new Error(`can not set internal ${key} field for current object`);
     }
 
-    const oldValue = target[key as string];
+    if (isReadOnly) {
+      throw new Error(`can not set ${key} field for readonly object`);
+    }
 
-    if (!shallow && isObject(value) && !isReactive(value)) {
-      value = reactive(value);
+    let oldValue = target[key as string];
+
+    // TODO from source code
+    if (isReadOnlyFunction(oldValue) && isRef(oldValue) && !isRef(value)) {
+      return false;
+    }
+
+    // TODO from source code
+    if (!isShallow) {
+      if (!isShallowFunction(value) && !isReadOnlyFunction(value)) {
+        oldValue = toRaw(oldValue);
+        value = toRaw(value);
+      }
+      if (!isArray(target) && isRef(oldValue) && !isRef(value)) {
+        oldValue.value = value;
+        return true;
+      }
+    } else {
+      void 0;
     }
 
     const res = Reflect.set(target, key, value, receiver);
 
-    if (needTrigger && !Object.is(oldValue, value)) {
-      trigger(target, "set", key as string, value, oldValue);
+    // TODO
+    if (Object.is(target, toRaw(receiver))) {
+      if (!Object.is(oldValue, value)) {
+        trigger(target, "set", key as string, value, oldValue);
+      }
     }
 
     return res;
@@ -63,7 +129,8 @@ function compose<T extends any[], K>(
 }
 
 export const unwrapRefGerHandler = compose(
-  createGetHandler(true, false),
+  (target: Record<string, unknown>, key: string, receiver: unknown) =>
+    Reflect.get(target, key, receiver),
   unwrapRef
 );
 
@@ -73,14 +140,11 @@ export const unwrapRefSetHandler = function (
   value: unknown,
   receiver: unknown
 ) {
-  if (key === REACTIVE_KEY) {
-    throw new Error(`can not set ${REACTIVE_KEY} field for reactive object`);
-  }
-
   const oldValue = target[key as string];
 
   if (isRef(oldValue) && !isRef(value)) {
     oldValue.value = value;
+
     return true;
   } else {
     return Reflect.set(target, key, value, receiver);

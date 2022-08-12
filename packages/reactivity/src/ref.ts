@@ -1,6 +1,5 @@
 import { isObject, isArray } from "@my-vue/shared";
 
-import { createReactiveWithCache } from "./create";
 import { trackEffects, triggerEffects } from "./effect";
 import { unwrapRefGerHandler, unwrapRefSetHandler } from "./handler";
 import { isReactive, reactive } from "./reactive";
@@ -48,7 +47,7 @@ export function unwrapRef(refObject: unknown) {
 export function proxyRefs(objectWithRefs: Record<string, unknown>) {
   if (isObject(objectWithRefs)) {
     if (isReactive(objectWithRefs)) return objectWithRefs;
-    return createReactiveWithCache(objectWithRefs, {
+    return new Proxy(objectWithRefs, {
       get: unwrapRefGerHandler,
       set: unwrapRefSetHandler,
     });

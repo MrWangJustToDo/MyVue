@@ -13,10 +13,13 @@ type WatchCallback = (
 function traversal(target: unknown, set = new Set()) {
   if (isObject(target)) {
     if (set.has(target)) return target;
+
     set.add(target);
+
     for (const key in target) {
       traversal(target[key], set);
     }
+
     return target;
   } else {
     return target;
@@ -25,6 +28,7 @@ function traversal(target: unknown, set = new Set()) {
 
 export function watch(source: WatchSource, cb: WatchCallback) {
   let effectAction: () => unknown = () => void 0;
+
   if (isReactive(source)) {
     effectAction = () => traversal(source);
   } else if (isFunction(source)) {
@@ -44,6 +48,7 @@ export function watch(source: WatchSource, cb: WatchCallback) {
   const effect = new ReactiveEffect(effectAction, () => {
     if (cleanUp) {
       cleanUp();
+
       cleanUp = null;
     }
 
@@ -55,4 +60,6 @@ export function watch(source: WatchSource, cb: WatchCallback) {
   });
 
   oldValue = effect.run();
+
+  return effect;
 }

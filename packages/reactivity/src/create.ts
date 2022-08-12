@@ -1,4 +1,19 @@
-import { globalReactiveMap } from "./env";
+import {
+  globalReactiveMap,
+  globalReadOnlyMap,
+  globalShallowReactiveMap,
+  globalShallowReadOnlyMap,
+} from "./env";
+import { generateProxyHandler } from "./handler";
+
+export const getProxyCacheMap = (isShallow: boolean, isReadOnly: boolean) => {
+  if (isShallow && isReadOnly) {
+    return globalShallowReadOnlyMap;
+  }
+  if (isShallow) return globalShallowReactiveMap;
+  if (isReadOnly) return globalReadOnlyMap;
+  return globalReactiveMap;
+};
 
 export function createReactive<T extends Record<string, unknown>>(
   target: T,
@@ -16,7 +31,12 @@ export function createReactive<T extends Record<string, unknown>>(
 
 export function createReactiveWithCache<T extends Record<string, unknown>>(
   target: T,
-  proxyHandler: ProxyHandler<T>
+  isShallow: boolean,
+  isReadOnly: boolean
 ) {
-  return createReactive(target, globalReactiveMap, proxyHandler);
+  return createReactive(
+    target,
+    getProxyCacheMap(isShallow, isReadOnly),
+    generateProxyHandler(isShallow, isReadOnly)
+  );
 }

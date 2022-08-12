@@ -22,13 +22,13 @@
             action = false;
           });
           if (action) {
-            console.log(n, o);
+            console.log(n, o, "---", 111);
           }
         }
       );
 
-      watch(data, (n, o) => {
-        console.log(n, o);
+      const foo = watch(data, (n, o) => {
+        console.log(n, o, "----", 22);
       });
     </script>
   </body>
