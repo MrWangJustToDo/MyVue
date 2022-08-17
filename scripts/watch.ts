@@ -7,9 +7,10 @@ import { watch } from "rollup";
 
 import { transformBuildOptions } from "./utils";
 
+import type { packages } from "./utils";
 import type { RollupOptions } from "rollup";
 
-const rollupWatch = async (packages: "reactivity" | "shared") => {
+const rollupWatch = async (packages: packages) => {
   const relativePath = resolve(process.cwd(), "packages", packages);
   const pkgPath = resolve(relativePath, "package.json");
   const content = await readFile(pkgPath, { encoding: "utf-8" });
@@ -49,3 +50,4 @@ const rollupWatch = async (packages: "reactivity" | "shared") => {
 
 rollupWatch("shared");
 rollupWatch("reactivity");
+rollupWatch("runtime-dom");

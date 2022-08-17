@@ -16,6 +16,8 @@
 
       const refValue = ref(false);
 
+      const fff = reactive({refValue});
+
       effect(() => {
         if (refValue.value) {
           console.log(data.a);

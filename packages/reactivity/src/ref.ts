@@ -3,17 +3,26 @@ import { isObject, isArray } from "@my-vue/shared";
 import { trackEffects, triggerEffects } from "./effect";
 import { unwrapRefGerHandler, unwrapRefSetHandler } from "./handler";
 import { isReactive, reactive } from "./reactive";
-import { REF_KEY } from "./symbol";
+import { RefFlags } from "./symbol";
 
 import type { ReactiveEffect } from "./effect";
 
-export function ref(value: unknown) {
-  if (isRef(value)) return value;
-  return new RefImpl(value);
+export interface Ref<T = unknown> {
+  value: T;
+  [RefFlags.Ref_key]: true;
 }
 
-export function isRef(value: unknown): value is RefImpl | ObjectRefImpl {
-  return isObject(value) && typeof value[REF_KEY] !== "undefined";
+export type UnwrapRef<T> = T extends Ref<infer V> ? UnwrapRef<V> : T;
+
+export function ref<T>(value: T): Ref<UnwrapRef<T>>;
+export function ref<T = any>(): Ref<T | undefined>;
+export function ref<T>(value?: unknown) {
+  if (isRef<T>(value)) return value;
+  return new RefImpl(value) as Ref<UnwrapRef<T>>;
+}
+
+export function isRef<T>(value: Ref<T> | unknown): value is Ref<T> {
+  return isObject(value) && typeof value[RefFlags.Ref_key] !== "undefined";
 }
 
 export function toRefs(reactiveValue: ReturnType<typeof reactive> | unknown) {
@@ -39,8 +48,8 @@ export function toRef(object: Record<string, unknown>, key: string | number) {
   return new ObjectRefImpl(object, key);
 }
 
-export function unwrapRef(refObject: unknown) {
-  if (isRef(refObject)) return refObject.value;
+export function unwrapRef<T>(refObject: Ref<T> | T) {
+  if (isRef<T>(refObject)) return refObject.value;
   return refObject;
 }
 
@@ -57,8 +66,8 @@ export function proxyRefs(objectWithRefs: Record<string, unknown>) {
 
 class RefImpl {
   private _value: unknown;
-  private [REF_KEY] = true;
-  private _depsSet: Set<ReactiveEffect> = new Set();
+  public readonly [RefFlags.Ref_key] = true;
+  public readonly _depsSet: Set<ReactiveEffect> = new Set();
   constructor(private _rawValue: unknown) {
     if (isObject(_rawValue)) {
       this._value = reactive(_rawValue);
@@ -89,10 +98,10 @@ class RefImpl {
 }
 
 class ObjectRefImpl {
-  private [REF_KEY] = true;
+  public readonly [RefFlags.Ref_key] = true;
   constructor(
-    private _object: Record<string, unknown>,
-    private _key: string | number
+    private readonly _object: Record<string, unknown>,
+    private readonly _key: string | number
   ) {}
 
   get value() {

@@ -7,9 +7,10 @@ import { rollup } from "rollup";
 
 import { transformBuildOptions } from "./utils";
 
+import type { packages } from "./utils";
 import type { RollupOptions, OutputOptions } from "rollup";
 
-const rollupBuild = async (packages: "reactivity" | "shared") => {
+const rollupBuild = async (packages: packages) => {
   const relativePath = resolve(process.cwd(), "packages", packages);
   const pkgPath = resolve(relativePath, "package.json");
   const content = await readFile(pkgPath, { encoding: "utf-8" });
@@ -41,3 +42,4 @@ const rollupBuild = async (packages: "reactivity" | "shared") => {
 
 rollupBuild("shared");
 rollupBuild("reactivity");
+rollupBuild("runtime-dom");

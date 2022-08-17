@@ -1,8 +1,8 @@
 import type { ReactiveEffect } from "./effect";
 
 export const globalDepsMap = new WeakMap<
-  Record<string, unknown>,
-  Map<string, Set<ReactiveEffect>>
+  Record<string, unknown> | unknown[],
+  Map<string | number | symbol, Set<ReactiveEffect>>
 >();
 
 export const globalReactiveMap = new WeakMap<

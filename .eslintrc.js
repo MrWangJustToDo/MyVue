@@ -5,7 +5,7 @@ module.exports = {
     tsconfigRootDir: __dirname,
     sourceType: "module",
   },
-  plugins: ["@typescript-eslint/eslint-plugin", "prettier", "import"],
+  plugins: ["@typescript-eslint/eslint-plugin", "prettier", "import", "jest"],
   extends: [
     "eslint:recommended",
     "plugin:import/recommended",
@@ -19,7 +19,7 @@ module.exports = {
     node: true,
     jest: true,
   },
-  ignorePatterns: [".eslintrc.js", "dist", "node_modules", "rollup.config.js"],
+  ignorePatterns: [".eslintrc.js", "dist", "node_modules", "jest.config.js"],
   rules: {
     "@typescript-eslint/interface-name-prefix": "off",
     "@typescript-eslint/explicit-function-return-type": "off",
@@ -66,4 +66,16 @@ module.exports = {
       "@typescript-eslint/parser": [".ts", ".tsx"],
     },
   },
+  overrides: [
+    // tests, no restrictions (runs in Node / jest with jsdom)
+    {
+      files: ["**/__tests__/**"],
+      rules: {
+        "no-restricted-globals": "off",
+        "no-restricted-syntax": "off",
+        "jest/no-disabled-tests": "error",
+        "jest/no-focused-tests": "error",
+      },
+    },
+  ],
 };

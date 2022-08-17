@@ -1,11 +1,13 @@
+import { isArray } from "@my-vue/shared";
+
 import { globalDepsMap } from "./env";
-import { EFFECT_KEY } from "./symbol";
+import { EffectFlags } from "./symbol";
 
 let globalEffect: null | ReactiveEffect = null;
 
 export class ReactiveEffect {
   private _active = true;
-  private [EFFECT_KEY] = true;
+  private [EffectFlags.Effect_key] = true;
   private _parent: ReactiveEffect | null = null;
   private _depsSetArray: Set<ReactiveEffect>[] = [];
 
@@ -27,13 +29,12 @@ export class ReactiveEffect {
 
   private entryScope() {
     this._parent = globalEffect;
-    // remove cycle, but how about long list?
-    if (globalEffect?._parent === this) globalEffect._parent = null;
     globalEffect = this;
   }
 
   private exitScope() {
     globalEffect = this._parent;
+    this._parent = null;
   }
 
   run() {
@@ -55,7 +56,13 @@ export class ReactiveEffect {
   }
 
   update(newValue?: unknown, oldValue?: unknown) {
-    if (!this._active) return this._action();
+    if (!this._active) {
+      if (this._scheduler) {
+        return this._scheduler(newValue, oldValue);
+      } else {
+        return this._action();
+      }
+    }
 
     this.entryScope();
 
@@ -117,14 +124,23 @@ export function trackEffects(set: Set<ReactiveEffect>) {
 
 export function trigger(
   target: any,
-  type: "set",
+  type: "set" | "add" | "delete" | "clear",
   key: string,
   newValue: unknown,
   oldValue: unknown
 ) {
-  const depsSet = globalDepsMap.get(target)?.get(key);
-
-  if (depsSet) triggerEffects(depsSet, newValue, oldValue);
+  const depsMap = globalDepsMap.get(target);
+  if (!depsMap) return;
+  if (key === "length" && isArray(target)) {
+    depsMap.forEach((dep, _key) => {
+      if (_key === "length" || Number(_key) >= (newValue as number)) {
+        if (dep) triggerEffects(dep, newValue, oldValue);
+      }
+    });
+  } else {
+    const depsSet = depsMap.get(key);
+    if (depsSet) triggerEffects(depsSet, newValue, oldValue);
+  }
 }
 
 export function triggerEffects(
@@ -133,10 +149,11 @@ export function triggerEffects(
   newValue?: unknown
 ) {
   const allReactiveEffect = new Set(set);
-  // TODO Infinity loop
-  allReactiveEffect.forEach((reactiveEffect) =>
-    reactiveEffect.update(oldValue, newValue)
-  );
+  allReactiveEffect.forEach((reactiveEffect) => {
+    if (!Object.is(reactiveEffect, globalEffect)) {
+      reactiveEffect.update(oldValue, newValue);
+    }
+  });
 }
 
 export function effect(action: () => void) {

@@ -6,7 +6,13 @@
     "esModuleInterop": true,
     "moduleResolution": "Node",
     "skipLibCheck": true,
-    "pretty": true
+    "pretty": true,
+    "types": ["jest", "node"]
   },
-  "include": ["packages/**/src", "scripts"]
+  "include": [
+    "scripts",
+    "packages/*/src",
+    "packages/*/__tests__",
+    "packages/global.d.ts"
+  ]
 }

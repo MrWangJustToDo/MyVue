@@ -1,15 +1,21 @@
 import { isFunction } from "@my-vue/shared";
 
 import { ReactiveEffect, trackEffects, triggerEffects } from "./effect";
-import { COMPUTED_KEY } from "./symbol";
+import { ComputedFlags } from "./symbol";
 
-type GetterOrOption =
-  | (() => unknown)
-  | { get: () => unknown; set: (v: unknown) => unknown };
+export type ComputedGetter<T> = (...args: any[]) => T;
+export type ComputedSetter<T> = (v: T) => void;
 
-export const computed = (getterOrOption: GetterOrOption) => {
-  let getter: () => unknown = () => void 0;
-  let setter: (v: unknown) => unknown = () => void 0;
+export interface WritableComputedOptions<T> {
+  get: ComputedGetter<T>;
+  set: ComputedSetter<T>;
+}
+
+export const computed = <T>(
+  getterOrOption: WritableComputedOptions<T> | ComputedGetter<T>
+) => {
+  let getter: (...args: any[]) => T = () => void 0;
+  let setter: (v: T) => void = () => void 0;
   if (isFunction(getterOrOption)) {
     getter = getterOrOption;
   } else {
@@ -23,7 +29,7 @@ export const computed = (getterOrOption: GetterOrOption) => {
 class ComputedRefImpl {
   private _dirty = true;
   private _effect: ReactiveEffect;
-  private [COMPUTED_KEY] = true;
+  private [ComputedFlags.Computed_key] = true;
   private _value: unknown | null = null;
   private _depsSet: Set<ReactiveEffect> = new Set();
 

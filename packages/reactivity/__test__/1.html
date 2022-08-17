@@ -10,11 +10,18 @@
   <body>
     <div id="app"></div>
     <script>
-      const { reactive, effect } = Reactive;
+      const { reactive, effect, shallowReactive, readonly, shallowReadonly } =
+        Reactive;
 
       const d = { a: 1, b: 2, c: 3, d: { a: 1, b: 2 } };
 
       const app = reactive(d);
+
+      const bar = readonly(d);
+
+      const baz = shallowReactive(d);
+
+      const foo = shallowReadonly(d);
 
       effect(() => {
         console.log("app.d.a", app.d.a);
@@ -29,13 +36,22 @@
       const data = reactive({ a: "hello" });
 
       const f = effect(() => {
-        console.log('run');
+        console.log("run");
         document.getElementById("app").innerText = data.a;
       });
 
       setTimeout(() => {
         data.a = "大家好";
       }, 3000);
+
+      const arrayItem = { a: 1, b: 2, c: 3 };
+      const reactiveArray = reactive([arrayItem]);
+
+      console.log(reactiveArray.includes(arrayItem));
+
+      effect(() => {
+        console.log(reactiveArray[0]);
+      })
     </script>
   </body>
 </html>
