@@ -27,3 +27,12 @@ export function isInteger(target: unknown): target is number {
 export function isNumber(target: unknown): target is number {
   return typeof target === "number";
 }
+
+export function isCollection(target: unknown): target is Iterable<unknown> {
+  return (
+    target instanceof Map ||
+    target instanceof Set ||
+    target instanceof WeakMap ||
+    target instanceof WeakSet
+  );
+}

@@ -1,7 +1,7 @@
-import { isArray, isInteger, isObject } from "@my-vue/shared";
+import { isArray, isCollection, isInteger, isObject } from "@my-vue/shared";
 
 import { getProxyCacheMap } from "./create";
-import { track, trigger } from "./effect";
+import { pauseTracking, resetTracking, track, trigger } from "./effect";
 import {
   reactive,
   isReadonly as isReadOnlyFunction,
@@ -9,7 +9,7 @@ import {
   toRaw,
   readonly,
 } from "./reactive";
-import { isRef, unwrapRef } from "./ref";
+import { isRef } from "./ref";
 import { ReactiveFlags } from "./symbol";
 
 /**
@@ -23,7 +23,6 @@ import { ReactiveFlags } from "./symbol";
  * })
  */
 
-// TODO more function
 export const generateArrayProxyHandler = () => {
   const methodNames = [
     "includes",
@@ -34,9 +33,8 @@ export const generateArrayProxyHandler = () => {
     "findLast",
     "findLastIndex",
   ] as const;
-  // 这些方法会修改数组  同时也会访问length属性，对于数组的操作可能会死循环
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // 这些方法会修改数组  同时也会访问length属性，对于数组的操作可能会死循环
   const noTrackMethodNames = [
     "push",
     "pop",
@@ -44,9 +42,15 @@ export const generateArrayProxyHandler = () => {
     "unshift",
     "splice",
   ] as const;
-  return methodNames.reduce<
-    Partial<Record<typeof methodNames[number], (...args: unknown[]) => unknown>>
-  >((p, c) => {
+
+  const handlerObject: Partial<
+    Record<
+      typeof methodNames[number] | typeof noTrackMethodNames[number],
+      (...args: unknown[]) => unknown
+    >
+  > = {};
+
+  methodNames.reduce((p, c) => {
     p[c] = function (this: unknown[], ...args: unknown[]) {
       const arr = toRaw(this) as any;
       for (let i = 0; i < this.length; i++) {
@@ -61,7 +65,20 @@ export const generateArrayProxyHandler = () => {
       }
     };
     return p;
-  }, {});
+  }, handlerObject);
+
+  noTrackMethodNames.reduce((p, c) => {
+    p[c] = function (this: unknown[], ...args: unknown[]) {
+      pauseTracking();
+      const arr = toRaw(this) as any;
+      const res = arr[c].apply(this, args);
+      resetTracking();
+      return res;
+    };
+    return p;
+  }, handlerObject);
+
+  return handlerObject;
 };
 
 const arrayProxyHandler = generateArrayProxyHandler();
@@ -70,16 +87,87 @@ export const generateProxyHandler = (
   isShallow = false,
   isReadOnly = false
 ): ProxyHandler<Record<string, unknown>> => {
+  const deletePropertyHandler = createDeletePropertyHandler(isReadOnly);
+  const getHandler = createGetHandler(isShallow, isReadOnly);
+  const setHandler = createSetHandler(isShallow, isReadOnly);
+  const ownKeysHandler = createOwnKeysHandler();
+  const hasHandler = createHasHandler();
   return {
-    get: createGetHandler(isShallow, isReadOnly),
-    set: createSetHandler(isShallow, isReadOnly),
+    deleteProperty: deletePropertyHandler,
+    ownKeys: ownKeysHandler,
+    get: getHandler,
+    set: setHandler,
+    has: hasHandler,
+  };
+};
+
+export const createObjectGetHandler = (
+  isShallow: boolean,
+  isReadOnly: boolean
+) => {
+  return function (
+    target: Record<string, unknown>,
+    key: string | symbol,
+    receiver: unknown
+  ) {
+    const res = Reflect.get(target, key, receiver);
+
+    if (!isReadOnly) {
+      track(target, "get", key);
+    }
+
+    if (isShallow) return res;
+
+    if (isRef(res)) return res.value;
+
+    if (isObject(res)) {
+      return isReadOnly ? readonly(res) : reactive(res);
+    }
+
+    return res;
+  };
+};
+
+export const createArrayGetHandler = (
+  isShallow: boolean,
+  isReadOnly: boolean
+) => {
+  return function (
+    target: unknown[],
+    key: string | symbol | number,
+    receiver: unknown
+  ) {
+    if (!isReadOnly && Reflect.has(arrayProxyHandler, key)) {
+      return Reflect.get(arrayProxyHandler, key, receiver);
+    }
+
+    const res = Reflect.get(target, key, receiver);
+
+    if (!isReadOnly) {
+      track(target, "get", key);
+    }
+
+    if (isShallow) return res;
+
+    if (isRef(res)) {
+      return isInteger(key) ? res : res.value;
+    }
+
+    if (isObject(res)) {
+      return isReadOnly ? readonly(res) : reactive(res);
+    }
+
+    return res;
   };
 };
 
 export const createGetHandler = (isShallow: boolean, isReadOnly: boolean) => {
+  const objectGetHandler = createObjectGetHandler(isShallow, isReadOnly);
+  const arrayGetHandler = createArrayGetHandler(isShallow, isReadOnly);
+
   return function (
-    target: Record<string, unknown>,
-    key: string | symbol,
+    target: Record<string | number | symbol, unknown>,
+    key: string | number | symbol,
     receiver: unknown
   ) {
     if (key === ReactiveFlags.Reactive_key) return !isReadOnly;
@@ -92,36 +180,50 @@ export const createGetHandler = (isShallow: boolean, isReadOnly: boolean) => {
       return target;
     }
 
-    const res = Reflect.get(target, key, receiver);
-
-    /**
-     * TODO: from source code, array function / symbol
-     */
-
-    const targetIsArray = isArray(target);
-
-    // 劫持特定的数组方法，使其能够正确的处理原始数据和proxy数据转换以及对应的依赖收集
-    if (targetIsArray && Reflect.has(arrayProxyHandler, key)) {
-      return Reflect.get(arrayProxyHandler, key, receiver);
+    if (isArray(target)) {
+      return arrayGetHandler(target, key, receiver);
     }
-
-    if (!isReadOnly) {
-      track(target, "get", key as string);
+    if (isCollection(target)) {
+      throw new Error("current not support collection object");
     }
+    return objectGetHandler(target, key as string | symbol, receiver);
+  };
+};
 
-    if (isShallow) {
-      return res;
+export const createDeletePropertyHandler = (
+  isReadonly: boolean
+): ProxyHandler<Record<string, unknown>>["deleteProperty"] => {
+  return function (target, key) {
+    if (isReadonly) {
+      console.warn("current object is readonly object");
+      return true;
     }
-
-    if (isRef(res)) {
-      return targetIsArray && isInteger(key) ? res : res.value;
+    const hasKey = Reflect.has(target, key);
+    const oldValue = target[key as string];
+    const result = Reflect.deleteProperty(target, key);
+    if (result && hasKey) {
+      trigger(target, "delete", key, undefined, oldValue);
     }
+    return result;
+  };
+};
 
-    if (isObject(res)) {
-      return isReadOnly ? readonly(res) : reactive(res);
-    }
+export const createHasHandler = (): ProxyHandler<
+  Record<string, unknown>
+>["has"] => {
+  return function (target, key) {
+    const result = Reflect.has(target, key);
+    track(target, "has", key);
+    return result;
+  };
+};
 
-    return res;
+export const createOwnKeysHandler = (): ProxyHandler<
+  Record<string, unknown>
+>["ownKeys"] => {
+  return function (target) {
+    track(target, "iterate", isArray(target) ? "length" : "collection");
+    return Reflect.ownKeys(target);
   };
 };
 
@@ -145,6 +247,8 @@ export const createSetHandler = (isShallow: boolean, isReadOnly: boolean) => {
       throw new Error(`can not set ${key} field for readonly object`);
     }
 
+    const targetIsArray = isArray(target);
+
     let oldValue = target[key as string];
 
     // TODO from source code
@@ -158,7 +262,7 @@ export const createSetHandler = (isShallow: boolean, isReadOnly: boolean) => {
         oldValue = toRaw(oldValue);
         value = toRaw(value);
       }
-      if (!isArray(target) && isRef(oldValue) && !isRef(value)) {
+      if (!targetIsArray && isRef(oldValue) && !isRef(value)) {
         oldValue.value = value;
         return true;
       }
@@ -166,49 +270,22 @@ export const createSetHandler = (isShallow: boolean, isReadOnly: boolean) => {
       void 0;
     }
 
+    const hadKey =
+      targetIsArray && isInteger(key)
+        ? Number(key) < target.length
+        : Reflect.has(target, key);
+
     const res = Reflect.set(target, key, value, receiver);
 
     // 原型链的proxy set方法会按层级触发
     if (Object.is(target, toRaw(receiver))) {
-      if (!Object.is(oldValue, value)) {
-        trigger(target, "set", key as string, value, oldValue);
+      if (!hadKey) {
+        trigger(target, "add", key, value, oldValue);
+      } else if (!Object.is(oldValue, value)) {
+        trigger(target, "set", key, value, oldValue);
       }
     }
 
     return res;
   };
-};
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function compose<T extends any[], K>(
-  handler: (...args: T) => K,
-  ...transform: ((v: K | unknown) => K | any)[]
-) {
-  return function (...args: T) {
-    const res = handler.call(null, ...args);
-    return transform.reduce((p, c) => c(p))(res);
-  };
-}
-
-export const unwrapRefGerHandler = (
-  target: Record<string, unknown>,
-  key: string,
-  receiver: unknown
-) => unwrapRef(Reflect.get(target, key, receiver));
-
-export const unwrapRefSetHandler = (
-  target: Record<string, unknown>,
-  key: string,
-  value: unknown,
-  receiver: unknown
-) => {
-  const oldValue = target[key as string];
-
-  if (isRef(oldValue) && !isRef(value)) {
-    oldValue.value = value;
-
-    return true;
-  } else {
-    return Reflect.set(target, key, value, receiver);
-  }
 };

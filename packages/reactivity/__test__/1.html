@@ -10,48 +10,86 @@
   <body>
     <div id="app"></div>
     <script>
-      const { reactive, effect, shallowReactive, readonly, shallowReadonly } =
-        Reactive;
+      const {
+        reactive,
+        effect,
+        shallowReactive,
+        readonly,
+        shallowReadonly,
+        computed,
+        ref,
+      } = Reactive;
 
-      const d = { a: 1, b: 2, c: 3, d: { a: 1, b: 2 } };
+      // const d = { a: 1, b: 2, c: 3, d: { a: 1, b: 2 } };
 
-      const app = reactive(d);
+      // const app = reactive(d);
 
-      const bar = readonly(d);
+      // const bar = readonly(d);
 
-      const baz = shallowReactive(d);
+      // const baz = shallowReactive(d);
 
-      const foo = shallowReadonly(d);
+      // const foo = shallowReadonly(d);
 
+      // effect(() => {
+      //   console.log("app.d.a", app.d.a);
+      //   effect(() => {
+      //     console.log("app.a", app.a);
+      //   });
+      //   effect(() => {
+      //     console.log("app.b", app.b);
+      //   });
+      // });
+
+      // const data = reactive({ a: "hello" });
+
+      // const f = effect(() => {
+      //   console.log("run");
+      //   document.getElementById("app").innerText = data.a;
+      // });
+
+      // setTimeout(() => {
+      //   data.a = "大家好";
+      // }, 3000);
+
+      // const arrayItem = { a: 1, b: 2, c: 3 };
+      // const reactiveArray = reactive([arrayItem]);
+
+      // console.log(reactiveArray.includes(arrayItem));
+
+      // effect(() => {
+      //   console.log(reactiveArray[0]);
+      // });
+
+      // const arrayData = [1, 2, 3, 4];
+
+      // const reactiveArrayData = reactive(arrayData);
+
+      // effect(() => {
+      //   for (let key in reactiveArrayData) {
+      //     console.log("run", key);
+      //   }
+      // });
+
+      // const a = computed(() => 1);
+      // // writable
+      // const b = computed({
+      //   get: () => 1,
+      //   set: () => {
+      //     void 0;
+      //   },
+      // });
+      // const c = ref("c");
+      // const obj = reactive({ a, b, c });
+
+      const obj = {};
+      const arr = reactive([obj, {}]);
+
+      let index = -1;
       effect(() => {
-        console.log("app.d.a", app.d.a);
-        effect(() => {
-          console.log("app.a", app.a);
-        });
-        effect(() => {
-          console.log("app.b", app.b);
-        });
+        console.log('run')
+        index = arr.indexOf(obj);
       });
-
-      const data = reactive({ a: "hello" });
-
-      const f = effect(() => {
-        console.log("run");
-        document.getElementById("app").innerText = data.a;
-      });
-
-      setTimeout(() => {
-        data.a = "大家好";
-      }, 3000);
-
-      const arrayItem = { a: 1, b: 2, c: 3 };
-      const reactiveArray = reactive([arrayItem]);
-
-      console.log(reactiveArray.includes(arrayItem));
-
-      effect(() => {
-        console.log(reactiveArray[0]);
-      })
+      arr.reverse();
     </script>
   </body>
 </html>

@@ -1,7 +1,6 @@
 import { isObject, isArray } from "@my-vue/shared";
 
 import { trackEffects, triggerEffects } from "./effect";
-import { unwrapRefGerHandler, unwrapRefSetHandler } from "./handler";
 import { isReactive, reactive } from "./reactive";
 import { RefFlags } from "./symbol";
 
@@ -12,7 +11,11 @@ export interface Ref<T = unknown> {
   [RefFlags.Ref_key]: true;
 }
 
-export type UnwrapRef<T> = T extends Ref<infer V> ? UnwrapRef<V> : T;
+export type UnwrapRef<T> = T extends Ref<infer V>
+  ? UnwrapRef<V>
+  : T extends Record<string, unknown>
+  ? { [K in keyof T]: UnwrapRef<T[K]> }
+  : T;
 
 export function ref<T>(value: T): Ref<UnwrapRef<T>>;
 export function ref<T = any>(): Ref<T | undefined>;
@@ -22,7 +25,11 @@ export function ref<T>(value?: unknown) {
 }
 
 export function isRef<T>(value: Ref<T> | unknown): value is Ref<T> {
-  return isObject(value) && typeof value[RefFlags.Ref_key] !== "undefined";
+  return (
+    isObject(value) &&
+    typeof value[RefFlags.Ref_key] === "boolean" &&
+    !!value[RefFlags.Ref_key]
+  );
 }
 
 export function toRefs(reactiveValue: ReturnType<typeof reactive> | unknown) {
@@ -48,10 +55,33 @@ export function toRef(object: Record<string, unknown>, key: string | number) {
   return new ObjectRefImpl(object, key);
 }
 
-export function unwrapRef<T>(refObject: Ref<T> | T) {
+export function unRef<T>(refObject: Ref<T> | T) {
   if (isRef<T>(refObject)) return refObject.value;
   return refObject;
 }
+
+export const unwrapRefGerHandler = (
+  target: Record<string, unknown>,
+  key: string,
+  receiver: unknown
+) => unRef(Reflect.get(target, key, receiver));
+
+export const unwrapRefSetHandler = (
+  target: Record<string, unknown>,
+  key: string,
+  value: unknown,
+  receiver: unknown
+) => {
+  const oldValue = target[key as string];
+
+  if (isRef(oldValue) && !isRef(value)) {
+    oldValue.value = value;
+
+    return true;
+  } else {
+    return Reflect.set(target, key, value, receiver);
+  }
+};
 
 export function proxyRefs(objectWithRefs: Record<string, unknown>) {
   if (isObject(objectWithRefs)) {

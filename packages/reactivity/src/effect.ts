@@ -1,19 +1,22 @@
-import { isArray } from "@my-vue/shared";
+import { isArray, isInteger } from "@my-vue/shared";
 
 import { globalDepsMap } from "./env";
 import { EffectFlags } from "./symbol";
 
 let globalEffect: null | ReactiveEffect = null;
 
-export class ReactiveEffect {
+export class ReactiveEffect<T = any> {
   private _active = true;
-  private [EffectFlags.Effect_key] = true;
   private _parent: ReactiveEffect | null = null;
-  private _depsSetArray: Set<ReactiveEffect>[] = [];
+  public readonly [EffectFlags.Effect_key] = true;
+  private readonly _depsSetArray: Set<ReactiveEffect>[] = [];
 
   constructor(
-    private _action: () => unknown,
-    private _scheduler?: (newValue: unknown, oldValue: unknown) => unknown
+    private readonly _action: () => T,
+    private readonly _scheduler?: (
+      newValue: unknown,
+      oldValue: unknown
+    ) => unknown
   ) {}
 
   cleanDeps() {
@@ -56,13 +59,7 @@ export class ReactiveEffect {
   }
 
   update(newValue?: unknown, oldValue?: unknown) {
-    if (!this._active) {
-      if (this._scheduler) {
-        return this._scheduler(newValue, oldValue);
-      } else {
-        return this._action();
-      }
-    }
+    if (!this._active) return this._action();
 
     this.entryScope();
 
@@ -93,21 +90,42 @@ export class ReactiveEffect {
   }
 }
 
-export function track(target: any, type: "get", key: string) {
-  if (!globalEffect) return;
+export let shouldTrack = true;
+const trackStack: boolean[] = [];
 
-  if (!globalDepsMap.has(target)) {
-    globalDepsMap.set(target, new Map<string, Set<ReactiveEffect>>());
+export function pauseTracking() {
+  trackStack.push(shouldTrack);
+  shouldTrack = false;
+}
+
+export function enableTracking() {
+  trackStack.push(shouldTrack);
+  shouldTrack = true;
+}
+
+export function resetTracking() {
+  const last = trackStack.pop();
+  shouldTrack = last === undefined ? true : last;
+}
+
+export function track(
+  target: any,
+  type: "get" | "has" | "iterate",
+  key: string | symbol | number
+) {
+  if (!globalEffect || !shouldTrack) return;
+
+  let depsMap = globalDepsMap.get(target);
+
+  if (!depsMap) {
+    globalDepsMap.set(target, (depsMap = new Map()));
   }
 
-  const targetMap = globalDepsMap.get(target) as Map<
-    string,
-    Set<ReactiveEffect>
-  >;
+  let depsSet = depsMap.get(key);
 
-  if (!targetMap.has(key)) targetMap.set(key, new Set());
-
-  const depsSet = targetMap.get(key) as Set<ReactiveEffect>;
+  if (!depsSet) {
+    depsMap.set(key, (depsSet = new Set()));
+  }
 
   trackEffects(depsSet);
 }
@@ -125,18 +143,33 @@ export function trackEffects(set: Set<ReactiveEffect>) {
 export function trigger(
   target: any,
   type: "set" | "add" | "delete" | "clear",
-  key: string,
+  key: string | symbol | number,
   newValue: unknown,
   oldValue: unknown
 ) {
   const depsMap = globalDepsMap.get(target);
   if (!depsMap) return;
-  if (key === "length" && isArray(target)) {
-    depsMap.forEach((dep, _key) => {
-      if (_key === "length" || Number(_key) >= (newValue as number)) {
-        if (dep) triggerEffects(dep, newValue, oldValue);
+  if (isArray(target)) {
+    // 直接修改length
+    if (key === "length") {
+      depsMap.forEach((depsSet, _key) => {
+        if (_key === "length") {
+          if (depsSet) triggerEffects(depsSet, newValue, oldValue);
+        }
+        if (Number(_key) >= (newValue as number)) {
+          if (depsSet) triggerEffects(depsSet);
+        }
+      });
+    }
+    if (isInteger(key)) {
+      const depsSet = depsMap.get(key);
+      if (depsSet) triggerEffects(depsSet, oldValue, newValue);
+      // 数组调用了push等方法
+      if (type === "add") {
+        const depsSet = depsMap.get("length");
+        if (depsSet) triggerEffects(depsSet);
       }
-    });
+    }
   } else {
     const depsSet = depsMap.get(key);
     if (depsSet) triggerEffects(depsSet, newValue, oldValue);

@@ -1,7 +1,7 @@
 import { isFunction } from "@my-vue/shared";
 
 import { ReactiveEffect, trackEffects, triggerEffects } from "./effect";
-import { ComputedFlags } from "./symbol";
+import { ComputedFlags, RefFlags } from "./symbol";
 
 export type ComputedGetter<T> = (...args: any[]) => T;
 export type ComputedSetter<T> = (v: T) => void;
@@ -14,8 +14,10 @@ export interface WritableComputedOptions<T> {
 export const computed = <T>(
   getterOrOption: WritableComputedOptions<T> | ComputedGetter<T>
 ) => {
-  let getter: (...args: any[]) => T = () => void 0;
-  let setter: (v: T) => void = () => void 0;
+  let getter: (...args: any[]) => T;
+  let setter: (v: T) => void = () => {
+    console.warn("current computed is readonly");
+  };
   if (isFunction(getterOrOption)) {
     getter = getterOrOption;
   } else {
@@ -26,18 +28,19 @@ export const computed = <T>(
   return new ComputedRefImpl(getter, setter);
 };
 
-class ComputedRefImpl {
+class ComputedRefImpl<T> {
   private _dirty = true;
-  private _effect: ReactiveEffect;
-  private [ComputedFlags.Computed_key] = true;
-  private _value: unknown | null = null;
-  private _depsSet: Set<ReactiveEffect> = new Set();
+  private _effect: ReactiveEffect<T>;
+  private _value: T | null = null;
+  public readonly [RefFlags.Ref_key] = true;
+  public readonly [ComputedFlags.Computed_key] = true;
+  private readonly _depsSet: Set<ReactiveEffect> = new Set();
 
   constructor(
-    private _getter: () => unknown,
-    private _setter: (v: unknown) => unknown
+    readonly _getter: () => T,
+    private readonly _setter: (v: T) => void
   ) {
-    this._effect = new ReactiveEffect(_getter, () => {
+    this._effect = new ReactiveEffect<T>(_getter, () => {
       if (!this._dirty) {
         this._dirty = true;
         triggerEffects(this._depsSet);
@@ -53,10 +56,10 @@ class ComputedRefImpl {
       this._value = this._effect.run();
     }
 
-    return this._value;
+    return this._value as T;
   }
 
-  set value(v) {
+  set value(v: T) {
     // TODO
     this._setter(v);
   }

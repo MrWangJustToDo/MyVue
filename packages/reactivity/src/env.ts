@@ -5,6 +5,8 @@ export const globalDepsMap = new WeakMap<
   Map<string | number | symbol, Set<ReactiveEffect>>
 >();
 
+(globalThis as any)["globalDepsMap"] = globalDepsMap;
+
 export const globalReactiveMap = new WeakMap<
   Record<string, unknown>,
   Record<string, unknown>

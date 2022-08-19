@@ -8,20 +8,20 @@ import { generateProxyHandler } from "./handler";
 import { ReactiveFlags } from "./symbol";
 
 export const getProxyCacheMap = (isShallow: boolean, isReadOnly: boolean) => {
-  if (isShallow && isReadOnly) {
-    return globalShallowReadOnlyMap;
-  }
+  if (isShallow && isReadOnly) return globalShallowReadOnlyMap;
   if (isShallow) return globalShallowReactiveMap;
   if (isReadOnly) return globalReadOnlyMap;
   return globalReactiveMap;
 };
 
-export function createReactive<T extends Record<string, unknown>>(
+export const createReactive = <T extends Record<string, unknown>>(
   target: T,
   cacheMap: WeakMap<T, T>,
   proxyHandler: ProxyHandler<T>
-) {
+) => {
   if (target[ReactiveFlags.Skip_key]) return target;
+
+  if (!Object.isExtensible(target)) return target;
 
   if (cacheMap.has(target)) return cacheMap.get(target) as T;
 
@@ -30,7 +30,7 @@ export function createReactive<T extends Record<string, unknown>>(
   cacheMap.set(target, proxy);
 
   return proxy;
-}
+};
 
 export function createReactiveWithCache<T extends Record<string, unknown>>(
   target: T,

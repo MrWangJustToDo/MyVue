@@ -176,7 +176,7 @@ describe("reactivity/reactive", () => {
 
   test("should not unwrap Ref<T>", () => {
     const observedNumberRef = reactive(ref(1));
-    const observedObjectRef = reactive(ref({ foo: 1 }));
+    const observedObjectRef = reactive(ref({ foo: ref(1) }));
 
     expect(isRef(observedNumberRef)).toBe(true);
     expect(isRef(observedObjectRef)).toBe(true);
@@ -270,7 +270,7 @@ describe("reactivity/reactive", () => {
   test("should not observe objects with __v_skip", () => {
     const original = {
       foo: 1,
-      __v_skip: true,
+      __my_skip__: true,
     };
     const observed = reactive(original);
     expect(isReactive(observed)).toBe(false);
