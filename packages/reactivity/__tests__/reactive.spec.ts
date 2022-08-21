@@ -25,7 +25,7 @@ describe("reactivity/reactive", () => {
     expect(isReactive(reactiveObj)).toBe(true);
     // read prop of reactiveObject will cause reactiveObj[prop] to be reactive
     // @ts-ignore
-    const prototype = reactiveObj["__proto__"];
+    // const prototype = reactiveObj["__proto__"];
     const otherObj = { data: ["a"] };
     expect(isReactive(otherObj)).toBe(false);
     const reactiveOther = reactive(otherObj);

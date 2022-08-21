@@ -1,6 +1,6 @@
 import { resolve } from "path";
 
-export type packages = "reactivity" | "shared" | "runtime-dom";
+export type packages = "reactivity" | "shared" | "runtime-dom" | "runtime-core";
 
 export const transformBuildOptions = (
   options: Record<string, unknown>,

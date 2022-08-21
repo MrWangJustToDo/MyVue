@@ -51,3 +51,4 @@ const rollupWatch = async (packages: packages) => {
 rollupWatch("shared");
 rollupWatch("reactivity");
 rollupWatch("runtime-dom");
+rollupWatch("runtime-core");

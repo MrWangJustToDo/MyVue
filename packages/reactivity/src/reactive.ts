@@ -79,29 +79,17 @@ export function shallowReadonly<T>(target: T) {
 }
 
 export function isReactive(target: unknown): target is Record<string, unknown> {
-  return (
-    isObject(target) &&
-    typeof target[ReactiveFlags.Reactive_key] === "boolean" &&
-    !!target[ReactiveFlags.Reactive_key]
-  );
+  return isObject(target) && !!target[ReactiveFlags.Reactive_key];
 }
 
 export function isReadonly(
   target: unknown
 ): target is Readonly<Record<string, unknown>> {
-  return (
-    isObject(target) &&
-    typeof target[ReactiveFlags.Readonly_key] === "boolean" &&
-    !!target[ReactiveFlags.Readonly_key]
-  );
+  return isObject(target) && !!target[ReactiveFlags.Readonly_key];
 }
 
 export function isShallow(target: unknown): target is Record<string, unknown> {
-  return (
-    isObject(target) &&
-    typeof target[ReactiveFlags.Shallow_key] === "boolean" &&
-    !!target[ReactiveFlags.Shallow_key]
-  );
+  return isObject(target) && !!target[ReactiveFlags.Shallow_key];
 }
 
 export function isProxy(target: unknown): target is Record<string, unknown> {

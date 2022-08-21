@@ -1,4 +1,8 @@
 import { nodeApi } from "./nodeApi";
 import { patchProps } from "./pathProps";
 
-export const renderOptions = Object.assign(nodeApi, { patchProps });
+import type { RendererOptions } from "@my-vue/runtime-core";
+
+export const renderOptions: RendererOptions = Object.assign(nodeApi, {
+  patchProps,
+});

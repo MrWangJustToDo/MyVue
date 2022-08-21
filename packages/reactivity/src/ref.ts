@@ -25,11 +25,7 @@ export function ref<T>(value?: unknown) {
 }
 
 export function isRef<T>(value: Ref<T> | unknown): value is Ref<T> {
-  return (
-    isObject(value) &&
-    typeof value[RefFlags.Ref_key] === "boolean" &&
-    !!value[RefFlags.Ref_key]
-  );
+  return isObject(value) && !!value[RefFlags.Ref_key];
 }
 
 export function toRefs(reactiveValue: ReturnType<typeof reactive> | unknown) {
