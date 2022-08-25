@@ -90,6 +90,33 @@ export const createRenderer = (rendererOptions: RendererOptions) => {
     }
   };
 
+  const processComment = (
+    oldVNode: VNode | null,
+    newVNode: VNode,
+    container: RenderElement
+  ) => {
+    if (oldVNode === null) {
+      newVNode.dom = hostCreateComment((newVNode.children as string) || "");
+
+      const typedDOM = newVNode.dom as RenderElement;
+
+      typedDOM.__vnode__ = newVNode;
+
+      hostInsert(typedDOM, container);
+    }
+  };
+
+  const processFragment = (
+    oldVNode: VNode | null,
+    newVNode: VNode,
+    container: RenderElement,
+    isSVG: boolean
+  ) => {
+    if (oldVNode === null) {
+      mountChildren(newVNode.children as VNode[], container, isSVG);
+    }
+  };
+
   const processText = (
     oldVNode: VNode | null,
     newVNode: VNode,
@@ -127,8 +154,10 @@ export const createRenderer = (rendererOptions: RendererOptions) => {
 
     switch (type) {
       case MyVue_Comment:
+        processComment(oldVNode, newVNode, container);
         break;
       case MyVue_Fragment:
+        processFragment(oldVNode, newVNode, container, isSVG);
         break;
       case MyVue_Text:
         processText(oldVNode, newVNode, container);
@@ -152,6 +181,7 @@ export const createRenderer = (rendererOptions: RendererOptions) => {
       }
     } else {
       patch(container.__vnode__ || null, vnode, container);
+      container.__vnode__ = vnode;
     }
   };
 
