@@ -17,12 +17,23 @@ type VNodeType =
   | typeof MyVue_Fragment
   | typeof MyVue_Static;
 
+export type VNodeChild =
+  | VNode
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | void;
+
+export type VNodeChildren = Array<VNodeChild> | VNodeChild;
+
 export type VNode = {
   type: VNodeType;
-  key: string | undefined;
+  key: string | number | symbol | null;
   dom: Node | null;
   props: Record<string, unknown>;
-  children: null | Array<VNode> | string;
+  children: VNodeChildren;
   shapeFlag: ShapeFlags;
   [VNodeFlags.VNode_key]: true;
   [VNodeFlags.Skip_key]: true;
@@ -32,9 +43,13 @@ export type VNode = {
 export const createVNode = (
   type: VNodeType,
   props: Record<string, unknown> = {},
-  children: null | Array<VNode> | string = null
+  children: VNodeChildren = null
 ): VNode => {
-  let shapeFlag = isString(type) ? ShapeFlags.ELEMENT : 0;
+  let shapeFlag = isString(type)
+    ? ShapeFlags.ELEMENT
+    : isObject(type)
+    ? ShapeFlags.STATEFUL_COMPONENT
+    : 0;
 
   if (children) {
     const childrenIsArray = isArray(children);
@@ -44,11 +59,16 @@ export const createVNode = (
       : ShapeFlags.TEXT_CHILDREN;
   }
 
+  const key =
+    typeof props["key"] === "undefined"
+      ? null
+      : (props["key"] as string | number | symbol);
+
   const vnode = {
     [VNodeFlags.VNode_key]: true,
     [VNodeFlags.Skip_key]: true,
     dom: null,
-    key: props["key"] as string | undefined,
+    key,
     type,
     props,
     children,
@@ -64,9 +84,7 @@ export const cloneVNode = (vnode: VNode) => {
   return clonedVNode;
 };
 
-export const normalizeVNode = (
-  child: VNode[] | VNode | string | null | boolean | symbol
-) => {
+export const normalizeVNode = (child: VNodeChildren) => {
   if (child === null || typeof child === "boolean") {
     return createVNode(MyVue_Comment);
   } else if (isArray(child)) {
@@ -82,4 +100,10 @@ export const isVNode = (
   target: unknown
 ): target is ReturnType<typeof createVNode> => {
   return isObject(target) && !!target[VNodeFlags.VNode_key];
+};
+
+export const isSameVNodeType = (n1: VNode | unknown, n2: VNode | unknown) => {
+  if (isVNode(n1) && isVNode(n2)) {
+    return n1.type === n2.type && n1?.key === n2?.key;
+  }
 };

@@ -11,4 +11,4 @@ export const renderOptions: RendererOptions = Object.assign(nodeApi, {
 
 export const render = createRenderer(renderOptions).render;
 
-export { h } from "@my-vue/runtime-core";
+export { h, Fragment, Text } from "@my-vue/runtime-core";

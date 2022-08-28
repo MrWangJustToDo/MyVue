@@ -12,7 +12,7 @@ export {
   toReactive,
   markRaw,
 } from "./reactive";
-export { effect } from "./effect";
+export { effect, ReactiveEffect } from "./effect";
 export { computed } from "./computed";
 export { watch } from "./watch";
 export { ref, toRef, toRefs, proxyRefs, isRef } from "./ref";

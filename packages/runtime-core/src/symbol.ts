@@ -10,4 +10,5 @@ export const enum VNodeFlags {
   VNode_key = "__my_vnode__",
   Skip_key = "__my_skip__",
   Cloned_key = "__my_cloned__",
+  Component_key = "__my_component__",
 }

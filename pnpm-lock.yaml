@@ -70,8 +70,10 @@ importers:
 
   packages/runtime-core:
     specifiers:
+      '@my-vue/reactivity': workspace:*
       '@my-vue/shared': workspace:*
     dependencies:
+      '@my-vue/reactivity': link:../reactivity
       '@my-vue/shared': link:../shared
 
   packages/runtime-dom:

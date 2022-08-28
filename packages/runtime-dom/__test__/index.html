@@ -11,12 +11,55 @@
     <div id="root"></div>
 
     <script>
-      const { render, h } = RuntimeDom;
+      const { render, h, Text, Fragment } = RuntimeDom;
 
       render(
-        h("div", { style: { color: "red" } }, [h("div", "null")]),
+        h(Fragment, { style: { color: "red" } }, [
+          h("div", { key: "1", style: { color: "yellow" } }, "124"),
+          h("div", { key: "2" }, "124"),
+          h("div", { key: "3" }, "124"),
+        ]),
         document.querySelector("#root")
       );
+
+      const start = () => {
+        console.log("run");
+        render(
+          h(Fragment, { style: { color: "blue" } }, [
+            h("div", { key: "0", style: { "font-size": "30px" } }, "1255554"),
+            h("div", { key: "1", style: { color: "red" } }, "124"),
+            h("div", { key: "2" }, "124"),
+            h("div", { key: "3" }, "124"),
+          ]),
+          document.querySelector("#root")
+        );
+      };
+    </script>
+
+    <script>
+      // 最长递增子序列
+      const arr = [3, 2, 8, 9, 5, 6, 7, 11, 15];
+
+      const getLongestQueue = (array) => {
+        const temp = [];
+        let result = [];
+        for (let i = 0; i < array.length; i++) {
+          if (temp.length && array[i] < temp[temp.length - 1]) {
+            result = result.length > temp.length ? result : [...temp];
+            // 二分优化直接找到最接近的小于值
+            while (temp.length && array[i] < temp[temp.length - 1]) {
+              temp.pop();
+            }
+          }
+          if (!temp.length || array[i] > temp[temp.length - 1]) {
+            temp.push(array[i]);
+          }
+        }
+        result = result.length > temp.length ? result : [...temp];
+        return result;
+      };
+
+      console.log(getLongestQueue(arr));
     </script>
   </body>
 </html>
