@@ -55,7 +55,7 @@ export class ReactiveEffect<T = any> {
       this.exitScope();
     }
 
-    return re;
+    return re as T;
   }
 
   update(newValue?: unknown, oldValue?: unknown) {

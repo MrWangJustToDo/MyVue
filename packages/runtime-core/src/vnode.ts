@@ -8,10 +8,12 @@ import {
   MyVue_Text,
 } from "./symbol";
 
+import type { ComponentType, MyVueComponentInstance } from "./component";
 import type { MyVue_Static } from "./symbol";
 
 type VNodeType =
   | string
+  | ComponentType
   | typeof MyVue_Text
   | typeof MyVue_Comment
   | typeof MyVue_Fragment
@@ -35,6 +37,7 @@ export type VNode = {
   props: Record<string, unknown>;
   children: VNodeChildren;
   shapeFlag: ShapeFlags;
+  component: MyVueComponentInstance | null;
   [VNodeFlags.VNode_key]: true;
   [VNodeFlags.Skip_key]: true;
   [VNodeFlags.Cloned_key]?: boolean;
@@ -64,16 +67,17 @@ export const createVNode = (
       ? null
       : (props["key"] as string | number | symbol);
 
-  const vnode = {
+  const vnode: VNode = {
     [VNodeFlags.VNode_key]: true,
     [VNodeFlags.Skip_key]: true,
     dom: null,
+    component: null,
     key,
     type,
     props,
     children,
     shapeFlag,
-  } as const;
+  };
 
   return vnode;
 };

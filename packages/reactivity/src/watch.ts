@@ -3,14 +3,15 @@ import { isFunction, isObject } from "@my-vue/shared";
 import { ReactiveEffect } from "./effect";
 import { isReactive } from "./reactive";
 
-type WatchSource = (() => unknown) | unknown;
-type WatchCallback = (
-  newValue: unknown,
-  oldValue: unknown,
+export type WatchSource<T = unknown> = (() => T) | T;
+
+export type WatchCallback<T = unknown> = (
+  newValue: T,
+  oldValue: T,
   onCleanUp: (fn: () => void) => void
 ) => void;
 
-function traversal(target: unknown, set = new Set()) {
+function traversal<T = unknown>(target: T, set = new Set()): T {
   if (isObject(target)) {
     if (set.has(target)) return target;
 
@@ -26,11 +27,14 @@ function traversal(target: unknown, set = new Set()) {
   }
 }
 
-export function watch(source: WatchSource, cb: WatchCallback) {
-  let effectAction: () => unknown = () => void 0;
+export function watch<T = unknown>(
+  source: WatchSource<T>,
+  cb: WatchCallback<T>
+) {
+  let effectAction: () => T | void = () => void 0;
 
   if (isReactive(source)) {
-    effectAction = () => traversal(source);
+    effectAction = () => traversal(source as T);
   } else if (isFunction(source)) {
     effectAction = source;
   } else {
@@ -43,9 +47,9 @@ export function watch(source: WatchSource, cb: WatchCallback) {
     cleanUp = fn;
   };
 
-  let oldValue: unknown = null;
+  let oldValue: T | null = null;
 
-  const effect = new ReactiveEffect(effectAction, () => {
+  const effect = new ReactiveEffect<T>(effectAction as () => T, () => {
     if (cleanUp) {
       cleanUp();
 
@@ -54,7 +58,7 @@ export function watch(source: WatchSource, cb: WatchCallback) {
 
     const newValue = effect.run();
 
-    cb(newValue, oldValue, onCleanUp);
+    cb(newValue, oldValue as T, onCleanUp);
 
     oldValue = newValue;
   });
