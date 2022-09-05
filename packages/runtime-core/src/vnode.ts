@@ -1,43 +1,40 @@
-import { isArray, isObject, isString } from "@my-vue/shared";
+import { isArray, isFunction, isObject, isString } from "@my-vue/shared";
 
 import { ShapeFlags } from "./shapeFlags";
-import {
-  VNodeFlags,
-  MyVue_Comment,
-  MyVue_Fragment,
-  MyVue_Text,
-} from "./symbol";
+import { VNodeFlags, MyVue_Comment, MyVue_Fragment, MyVue_Text } from "./symbol";
 
-import type { ComponentType, MyVueComponentInstance } from "./component";
+import type { ComponentType, MyVueInternalInstance } from "./component";
 import type { MyVue_Static } from "./symbol";
 
-type VNodeType =
+export type HostNode = Record<string | symbol | number, unknown>;
+
+export type HostRenderNode = HostNode & { __vnode__: VNode };
+
+export type HostRenderElement = HostRenderNode;
+
+export type VNodeType =
   | string
+  | (() => VNode)
   | ComponentType
   | typeof MyVue_Text
   | typeof MyVue_Comment
   | typeof MyVue_Fragment
   | typeof MyVue_Static;
 
-export type VNodeChild =
-  | VNode
-  | string
-  | number
-  | boolean
-  | null
-  | undefined
-  | void;
+export type VNodeChild = VNode | string | number | boolean | null | undefined | void;
 
 export type VNodeChildren = Array<VNodeChild> | VNodeChild;
 
-export type VNode = {
+export type VNode<HostNode = HostRenderNode, HostElement = HostRenderElement> = {
   type: VNodeType;
   key: string | number | symbol | null;
-  dom: Node | null;
+  dom: HostNode | null;
+  anchor: HostNode | null;
+  target: HostElement | null;
   props: Record<string, unknown>;
   children: VNodeChildren;
   shapeFlag: ShapeFlags;
-  component: MyVueComponentInstance | null;
+  component: MyVueInternalInstance | null;
   [VNodeFlags.VNode_key]: true;
   [VNodeFlags.Skip_key]: true;
   [VNodeFlags.Cloned_key]?: boolean;
@@ -52,25 +49,25 @@ export const createVNode = (
     ? ShapeFlags.ELEMENT
     : isObject(type)
     ? ShapeFlags.STATEFUL_COMPONENT
+    : isFunction(type)
+    ? ShapeFlags.FUNCTIONAL_COMPONENT
     : 0;
 
   if (children) {
     const childrenIsArray = isArray(children);
     children = childrenIsArray ? children : String(children);
-    shapeFlag |= childrenIsArray
-      ? ShapeFlags.ARRAY_CHILDREN
-      : ShapeFlags.TEXT_CHILDREN;
+    shapeFlag |= childrenIsArray ? ShapeFlags.ARRAY_CHILDREN : ShapeFlags.TEXT_CHILDREN;
   }
 
   const key =
-    typeof props["key"] === "undefined"
-      ? null
-      : (props["key"] as string | number | symbol);
+    typeof props["key"] === "undefined" ? null : (props["key"] as string | number | symbol);
 
   const vnode: VNode = {
     [VNodeFlags.VNode_key]: true,
     [VNodeFlags.Skip_key]: true,
     dom: null,
+    anchor: null,
+    target: null,
     component: null,
     key,
     type,
@@ -100,9 +97,7 @@ export const normalizeVNode = (child: VNodeChildren) => {
   }
 };
 
-export const isVNode = (
-  target: unknown
-): target is ReturnType<typeof createVNode> => {
+export const isVNode = (target: unknown): target is ReturnType<typeof createVNode> => {
   return isObject(target) && !!target[VNodeFlags.VNode_key];
 };
 

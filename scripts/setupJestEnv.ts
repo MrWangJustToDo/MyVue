@@ -13,17 +13,14 @@ expect.extend({
         pass: false,
         message: () =>
           `expected "${received}" to have been warned` +
-          (msgs.length
-            ? `.\n\nActual messages:\n\n - ${msgs}`
-            : ` but no warning was recorded.`),
+          (msgs.length ? `.\n\nActual messages:\n\n - ${msgs}` : ` but no warning was recorded.`),
       };
     }
   },
 
   toHaveBeenWarnedLast(received: string) {
     asserted.add(received);
-    const passed =
-      warn.mock.calls[warn.mock.calls.length - 1][0].includes(received);
+    const passed = warn.mock.calls[warn.mock.calls.length - 1][0].includes(received);
     if (passed) {
       return {
         pass: true,
@@ -56,8 +53,7 @@ expect.extend({
     } else {
       return {
         pass: false,
-        message: () =>
-          `expected "${received}" to have been warned ${n} times but got ${found}.`,
+        message: () => `expected "${received}" to have been warned ${n} times but got ${found}.`,
       };
     }
   },
@@ -86,9 +82,7 @@ afterEach(() => {
   warn.mockRestore();
   if (nonAssertedWarnings.length) {
     throw new Error(
-      `test case threw unexpected warnings:\n - ${nonAssertedWarnings.join(
-        "\n - "
-      )}`
+      `test case threw unexpected warnings:\n - ${nonAssertedWarnings.join("\n - ")}`
     );
   }
 });

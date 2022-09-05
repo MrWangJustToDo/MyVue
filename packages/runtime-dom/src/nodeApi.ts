@@ -1,9 +1,5 @@
 export const nodeApi = {
-  insert: (
-    child: Node,
-    parent: Element,
-    anchor: Node | Element | null | undefined
-  ) => {
+  insert: (child: Node, parent: Element, anchor: Node | Element | null | undefined) => {
     parent.insertBefore(child, anchor || null);
   },
 

@@ -13,10 +13,7 @@ export class ReactiveEffect<T = any> {
 
   constructor(
     private readonly _action: () => T,
-    private readonly _scheduler?: (
-      newValue: unknown,
-      oldValue: unknown
-    ) => unknown
+    private readonly _scheduler?: (newValue: unknown, oldValue: unknown) => unknown
   ) {}
 
   cleanDeps() {
@@ -108,11 +105,7 @@ export function resetTracking() {
   shouldTrack = last === undefined ? true : last;
 }
 
-export function track(
-  target: any,
-  type: "get" | "has" | "iterate",
-  key: string | symbol | number
-) {
+export function track(target: any, type: "get" | "has" | "iterate", key: string | symbol | number) {
   if (!globalEffect || !shouldTrack) return;
 
   let depsMap = globalDepsMap.get(target);
@@ -176,12 +169,9 @@ export function trigger(
   }
 }
 
-export function triggerEffects(
-  set: Set<ReactiveEffect>,
-  oldValue?: unknown,
-  newValue?: unknown
-) {
+export function triggerEffects(set: Set<ReactiveEffect>, oldValue?: unknown, newValue?: unknown) {
   const allReactiveEffect = new Set(set);
+
   allReactiveEffect.forEach((reactiveEffect) => {
     if (!Object.is(reactiveEffect, globalEffect)) {
       reactiveEffect.update(oldValue, newValue);

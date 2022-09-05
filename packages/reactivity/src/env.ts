@@ -7,15 +7,9 @@ export const globalDepsMap = new WeakMap<
 
 (globalThis as any)["globalDepsMap"] = globalDepsMap;
 
-export const globalReactiveMap = new WeakMap<
-  Record<string, unknown>,
-  Record<string, unknown>
->();
+export const globalReactiveMap = new WeakMap<Record<string, unknown>, Record<string, unknown>>();
 
-export const globalReadOnlyMap = new WeakMap<
-  Record<string, unknown>,
-  Record<string, unknown>
->();
+export const globalReadOnlyMap = new WeakMap<Record<string, unknown>, Record<string, unknown>>();
 
 export const globalShallowReactiveMap = new WeakMap<
   Record<string, unknown>,

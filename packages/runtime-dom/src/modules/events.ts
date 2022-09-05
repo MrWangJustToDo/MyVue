@@ -35,6 +35,7 @@ export const patchEvent = (
         }
       };
       invoker.value = nextValue;
+      eventMap[key] = invoker;
       el.addEventListener(eventName, invoker);
     }
   }

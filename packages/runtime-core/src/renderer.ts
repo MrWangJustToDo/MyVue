@@ -1,23 +1,25 @@
+import { MyVueInternalInstance, shouldUpdateComponent, updatePropsAndAttrs } from "./component";
+import { queueJob } from "./scheduler";
 import { ShapeFlags } from "./shapeFlags";
 import { MyVue_Comment, MyVue_Fragment, MyVue_Text } from "./symbol";
 import { isSameVNodeType, normalizeVNode } from "./vnode";
 
 import type { ComponentInstance } from "./component";
-import type { VNodeChild, VNode } from "./vnode";
+import type { VNodeChild, VNode, HostRenderNode, HostRenderElement } from "./vnode";
 
-export type RendererOptions = {
-  insert(child: Node, parent: Element, anchor?: Node | Element | null): void;
-  remove(child: Node): void;
-  createElement(tag: string, isSVG?: boolean): SVGElement | HTMLElement;
-  createText(text: string): Text;
-  createComment(text: string): Comment;
-  setText(node: Node, text: string): void;
-  setElementText(node: Element, text: string): void;
-  parentNode(node: Node): Element | null;
-  nextSibling(node: Node): Node | null;
-  querySelector?(selector: string): Element | null;
+export type RendererOptions<HostNode = HostRenderNode, HostElement = HostRenderElement> = {
+  insert(child: HostNode, parent: HostElement, anchor?: HostNode | null): void;
+  remove(child: HostNode): void;
+  createElement(tag: string, isSVG?: boolean): HostElement;
+  createText(text: string): HostNode;
+  createComment(text: string): HostNode;
+  setText(node: HostNode, text: string): void;
+  setElementText(node: HostElement, text: string): void;
+  parentNode(node: HostNode): HostElement | null;
+  nextSibling(node: HostNode): HostNode | null;
+  querySelector?(selector: string): HostElement | null;
   patchProps(
-    el: Element,
+    el: HostElement,
     key: string,
     prevValue: unknown,
     nextValue: unknown,
@@ -25,9 +27,22 @@ export type RendererOptions = {
   ): void;
 };
 
-type RenderElement = Element & { __vnode__: VNode };
+export type Render<HostElement = HostRenderElement> = (
+  vnode: VNode,
+  container: HostElement
+) => void;
 
-export const createRenderer = (rendererOptions: RendererOptions) => {
+export function createRenderer<HostNode = HostRenderNode, HostElement = HostRenderElement>(
+  rendererOptions: RendererOptions<HostNode, HostElement>
+): {
+  render: Render<HostElement>;
+};
+export function createRenderer<HostNode = Node, HostElement = Element>(
+  rendererOptions: RendererOptions<HostNode, HostElement>
+): {
+  render: Render<HostElement>;
+};
+export function createRenderer(rendererOptions: RendererOptions): { render: Render } {
   const {
     insert: hostInsert,
     remove: hostRemove,
@@ -38,26 +53,10 @@ export const createRenderer = (rendererOptions: RendererOptions) => {
     setText: hostSetText,
     setElementText: hostSetElementText,
     // parentNode: hostParentNode,
-    // nextSibling: hostNextSibling,
+    nextSibling: hostNextSibling,
   } = rendererOptions;
 
-  const mountChildren = (
-    children: VNodeChild[],
-    container: RenderElement,
-    anchor: RenderElement | null,
-    parentComponent: ComponentInstance | null,
-    isSVG: boolean
-  ) => {
-    for (let i = 0; i < children.length; i++) {
-      const child = (children[i] = normalizeVNode(children[i]));
-      _patch(null, child, container, anchor, parentComponent, isSVG);
-    }
-  };
-
-  const unmountChildren = (
-    children: VNode[],
-    parentComponent: ComponentInstance | null
-  ) => {
+  const unmountChildren = (children: VNode[], parentComponent: ComponentInstance | null) => {
     children.forEach((child) => unmount(child, parentComponent));
   };
 
@@ -67,10 +66,7 @@ export const createRenderer = (rendererOptions: RendererOptions) => {
     }
   };
 
-  const unmountElement = (
-    vnode: VNode,
-    parentComponent: ComponentInstance | null
-  ) => {
+  const unmountElement = (vnode: VNode, parentComponent: ComponentInstance | null) => {
     const { children, shapeFlag } = vnode;
     if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       unmountChildren(children as VNode[], parentComponent);
@@ -78,17 +74,27 @@ export const createRenderer = (rendererOptions: RendererOptions) => {
     unmountStatic(vnode);
   };
 
-  const unmountComponent = (
-    _vnode: VNode,
-    _parentComponent: ComponentInstance | null
-  ) => {
+  const unmountComponent = (_vnode: VNode, _parentComponent: ComponentInstance | null) => {
     void 0;
+  };
+
+  const mountChildren = (
+    children: VNodeChild[],
+    container: HostRenderElement,
+    anchor: HostRenderNode | null,
+    parentComponent: ComponentInstance | null,
+    isSVG: boolean
+  ) => {
+    for (let i = 0; i < children.length; i++) {
+      const child = (children[i] = normalizeVNode(children[i]));
+      patch(null, child, container, anchor, parentComponent, isSVG);
+    }
   };
 
   const mountElement = (
     vnode: VNode,
-    container: RenderElement,
-    anchor: RenderElement | null,
+    container: HostRenderElement,
+    anchor: HostRenderNode | null,
     parentComponent: ComponentInstance | null,
     isSVG: boolean
   ) => {
@@ -96,25 +102,19 @@ export const createRenderer = (rendererOptions: RendererOptions) => {
 
     vnode.dom = hostCreateElement(type as string, isSVG);
 
+    const typedDOM = vnode.dom as HostRenderNode;
+
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
-      hostSetElementText(vnode.dom as Element, children as string);
+      hostSetElementText(typedDOM, children as string);
     } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      mountChildren(
-        children as VNodeChild[],
-        vnode.dom as RenderElement,
-        anchor,
-        parentComponent,
-        isSVG
-      );
+      mountChildren(children as VNodeChild[], typedDOM, null, parentComponent, isSVG);
     }
 
     for (const key in props) {
       if (key !== "ref" && key !== "key") {
-        hostPatchProps(vnode.dom as Element, key, null, props[key], isSVG);
+        hostPatchProps(vnode.dom, key, null, props[key], isSVG);
       }
     }
-
-    const typedDOM = vnode.dom as RenderElement;
 
     typedDOM.__vnode__ = vnode;
 
@@ -123,16 +123,42 @@ export const createRenderer = (rendererOptions: RendererOptions) => {
 
   const mountComponent = (
     vnode: VNode,
-    container: RenderElement,
-    anchor: RenderElement | null,
+    container: HostRenderElement,
+    anchor: HostRenderNode | null,
     parentComponent: ComponentInstance | null,
     isSVG: boolean
   ) => {
-    void 0;
+    const componentInstance = new MyVueInternalInstance(vnode, parentComponent);
+
+    vnode.component = componentInstance;
+
+    const componentAction = () => {
+      if (!componentInstance.isMounted) {
+        const subTree = componentInstance.render();
+        const children = subTree;
+        patch(null, children, container, anchor, componentInstance, isSVG);
+        componentInstance.isMounted = true;
+      } else {
+        const { next, vnode } = componentInstance;
+        if (next) {
+          updateComponentPreRender(componentInstance, vnode, next);
+        }
+        const oldChildren = componentInstance.child as VNode;
+        const subTree = componentInstance.render();
+        const newChildren = subTree;
+        patch(oldChildren, newChildren, container, anchor, componentInstance, isSVG);
+      }
+    };
+
+    componentInstance.createEffectUpdate(componentAction, () => {
+      queueJob(componentInstance.update);
+    });
+
+    componentInstance.update();
   };
 
   const patchProps = (
-    node: Node,
+    node: HostRenderElement,
     vnode: VNode,
     oldProps: VNode["props"],
     newProps: VNode["props"],
@@ -143,12 +169,12 @@ export const createRenderer = (rendererOptions: RendererOptions) => {
         const prevValue = oldProps[key];
         const nextValue = newProps[key];
         if (nextValue !== prevValue) {
-          hostPatchProps(node as Element, key, prevValue, nextValue, isSVG);
+          hostPatchProps(node, key, prevValue, nextValue, isSVG);
         }
       }
       for (const key in oldProps) {
         if (!(key in newProps)) {
-          hostPatchProps(node as Element, key, oldProps[key], null, isSVG);
+          hostPatchProps(node, key, oldProps[key], null, isSVG);
         }
       }
     }
@@ -158,8 +184,8 @@ export const createRenderer = (rendererOptions: RendererOptions) => {
   const patchKeyedChildren = (
     oldChildren: VNode[],
     newChildren: VNodeChild[],
-    container: RenderElement,
-    parentAnchor: RenderElement | null,
+    container: HostRenderNode,
+    parentAnchor: HostRenderNode | null,
     parentComponent: ComponentInstance | null,
     isSVG: boolean
   ) => {
@@ -174,14 +200,7 @@ export const createRenderer = (rendererOptions: RendererOptions) => {
       const oldChild = oldChildren[i];
       const newChild = (newChildren[i] = normalizeVNode(newChildren[i]));
       if (isSameVNodeType(oldChild, newChild)) {
-        _patch(
-          oldChild,
-          newChild,
-          container,
-          parentAnchor,
-          parentComponent,
-          isSVG
-        );
+        patch(oldChild, newChild, container, null, parentComponent, isSVG);
       } else {
         break;
       }
@@ -195,14 +214,7 @@ export const createRenderer = (rendererOptions: RendererOptions) => {
       const oldChild = oldChildren[e1];
       const newChild = (newChildren[e2] = normalizeVNode(newChildren[e2]));
       if (isSameVNodeType(oldChild, newChild)) {
-        _patch(
-          oldChild,
-          newChild,
-          container,
-          parentAnchor,
-          parentComponent,
-          isSVG
-        );
+        patch(oldChild, newChild, container, null, parentComponent, isSVG);
       } else {
         break;
       }
@@ -224,10 +236,11 @@ export const createRenderer = (rendererOptions: RendererOptions) => {
     if (i > e1) {
       if (i <= e2) {
         const anchor = newChildren[e2 + 1]
-          ? ((newChildren[e2 + 1] as VNode).dom as RenderElement)
+          ? ((newChildren[e2 + 1] as VNode).dom as HostRenderNode)
           : parentAnchor;
+        // TODO if this vnode is a component vnode, should think
         while (i <= e2) {
-          _patch(
+          patch(
             null,
             (newChildren[i] = normalizeVNode(newChildren[i])),
             container,
@@ -254,65 +267,66 @@ export const createRenderer = (rendererOptions: RendererOptions) => {
         i++;
       }
     } else {
-      /**
-       * prev: (a b) c d e   (f g)
-       * next: (a b) e d c h (f g)
-       * i = 2, e1 = 4, e2 = 5
-       */
-      const keyToNewIndexMap = new Map<string | number | symbol, number>();
-      const keylessNewChildren = Array(newChildren.length);
-      const patchedNewChildren = Array(newChildren.length);
-      for (let index = i; index < e2; index++) {
-        const newChild = (newChildren[i] = normalizeVNode(newChildren[i]));
-        if (newChild.key !== null) {
-          keyToNewIndexMap.set(newChild.key, index);
-        } else {
-          keylessNewChildren[index] = newChild;
-        }
-      }
-
-      for (let index = i; index < e1; index++) {
-        const oldChild = oldChildren[index];
-        let newChildIndex: number | undefined = undefined;
-        if (oldChild.key !== null) {
-          newChildIndex = keyToNewIndexMap.get(oldChild.key);
-        } else {
-          for (let index = i; index < e2; index++) {
-            if (
-              keylessNewChildren[index] &&
-              isSameVNodeType(oldChild, newChildren[index])
-            ) {
-              newChildIndex = index;
-              break;
-            }
+      if (i === e1 && i === e2) {
+        patch(oldChildren[i], newChildren[i] as VNode, container, null, parentComponent, isSVG);
+      } else {
+        /**
+         * prev: (a b) c d e   (f g)
+         * next: (a b) e d c h (f g)
+         * i = 2, e1 = 4, e2 = 5
+         */
+        const keyToNewIndexMap = new Map<string | number | symbol, number>();
+        const keylessNewChildren = Array(newChildren.length);
+        const patchedNewChildren = Array(newChildren.length);
+        for (let index = i; index < e2; index++) {
+          const newChild = (newChildren[i] = normalizeVNode(newChildren[i]));
+          if (newChild.key !== null) {
+            keyToNewIndexMap.set(newChild.key, index);
+          } else {
+            keylessNewChildren[index] = newChild;
           }
         }
-        if (newChildIndex === undefined) {
-          unmount(oldChild);
-        } else {
-          patchedNewChildren[newChildIndex] = true;
-          _patch(
-            oldChild,
-            newChildren[newChildIndex] as VNode,
-            container,
-            null,
-            parentComponent,
-            isSVG
-          );
-        }
-      }
 
-      // TODO
-      for (let index = e2; index >= i; index--) {
-        const anchor = newChildren[index + 1]
-          ? ((newChildren[index + 1] as VNode).dom as RenderElement)
-          : parentAnchor;
-        const newChild = newChildren[index + 1] as VNode;
-        if (patchedNewChildren[index]) {
-          // todo
-          hostInsert(newChild.dom as RenderElement, container, anchor);
-        } else {
-          _patch(null, newChild, container, anchor, parentComponent, isSVG);
+        for (let index = i; index < e1; index++) {
+          const oldChild = oldChildren[index];
+          let newChildIndex: number | undefined = undefined;
+          if (oldChild.key !== null) {
+            newChildIndex = keyToNewIndexMap.get(oldChild.key);
+          } else {
+            for (let index = i; index < e2; index++) {
+              if (keylessNewChildren[index] && isSameVNodeType(oldChild, newChildren[index])) {
+                newChildIndex = index;
+                break;
+              }
+            }
+          }
+          if (newChildIndex === undefined) {
+            unmount(oldChild);
+          } else {
+            patchedNewChildren[newChildIndex] = true;
+            patch(
+              oldChild,
+              newChildren[newChildIndex] as VNode,
+              container,
+              null,
+              parentComponent,
+              isSVG
+            );
+          }
+        }
+
+        // move and mount
+        for (let index = e2; index >= i; index--) {
+          const anchor = newChildren[index + 1]
+            ? ((newChildren[index + 1] as VNode).dom as HostRenderNode)
+            : parentAnchor;
+          const newChild = newChildren[index + 1] as VNode;
+          if (patchedNewChildren[index]) {
+            // TODO
+            move(newChild, container, anchor);
+          } else {
+            patch(null, newChild, container, anchor, parentComponent, isSVG);
+          }
         }
       }
     }
@@ -321,8 +335,8 @@ export const createRenderer = (rendererOptions: RendererOptions) => {
   const patchChildren = (
     oldVNode: VNode,
     newVNode: VNode,
-    container: RenderElement,
-    anchor: RenderElement | null,
+    container: HostRenderElement,
+    anchor: HostRenderNode | null,
     parentComponent: ComponentInstance | null,
     isSVG: boolean
   ) => {
@@ -355,13 +369,7 @@ export const createRenderer = (rendererOptions: RendererOptions) => {
           hostSetElementText(container, "");
         }
         if (nextShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-          mountChildren(
-            nextChildren as VNodeChild[],
-            container,
-            anchor,
-            parentComponent,
-            isSVG
-          );
+          mountChildren(nextChildren as VNodeChild[], container, anchor, parentComponent, isSVG);
         }
       }
     }
@@ -370,34 +378,50 @@ export const createRenderer = (rendererOptions: RendererOptions) => {
   const patchElement = (
     oldVNode: VNode,
     newVNode: VNode,
-    anchor: RenderElement | null,
+    anchor: HostRenderNode | null,
     parentComponent: ComponentInstance | null,
     isSVG: boolean
   ) => {
-    newVNode.dom = oldVNode.dom as Node;
+    newVNode.dom = oldVNode.dom;
 
     const prevProps = oldVNode.props;
 
     const nextProps = newVNode.props;
 
-    patchProps(newVNode.dom, newVNode, prevProps, nextProps, isSVG);
+    const typedDOM = newVNode.dom as HostRenderNode;
 
-    const typedDOM = newVNode.dom as RenderElement;
+    patchChildren(oldVNode, newVNode, typedDOM, null, parentComponent, isSVG);
 
-    patchChildren(oldVNode, newVNode, typedDOM, anchor, parentComponent, isSVG);
+    patchProps(typedDOM, newVNode, prevProps, nextProps, isSVG);
 
     typedDOM.__vnode__ = newVNode;
   };
 
-  const patchComponent = () => {
-    void 0;
+  const updateComponentPreRender = (
+    instance: MyVueInternalInstance,
+    oldVNode: VNode,
+    newVNode: VNode
+  ) => {
+    instance.next = null;
+    instance.vnode = newVNode;
+    updatePropsAndAttrs(instance, oldVNode, newVNode);
+  };
+
+  const updateComponent = (oldVNode: VNode, newVNode: VNode) => {
+    const instance = (newVNode.component = oldVNode.component) as MyVueInternalInstance;
+    instance.next = newVNode;
+    if (shouldUpdateComponent(oldVNode, newVNode)) {
+      instance.update();
+    } else {
+      instance.vnode = newVNode;
+    }
   };
 
   const processElement = (
     oldVNode: VNode | null,
     newVNode: VNode,
-    container: RenderElement,
-    anchor: RenderElement | null,
+    container: HostRenderElement,
+    anchor: HostRenderNode | null,
     parentComponent: ComponentInstance | null,
     isSVG: boolean
   ) => {
@@ -412,65 +436,69 @@ export const createRenderer = (rendererOptions: RendererOptions) => {
   const processComment = (
     oldVNode: VNode | null,
     newVNode: VNode,
-    container: RenderElement,
-    anchor: RenderElement | null
+    container: HostRenderElement,
+    anchor: HostRenderNode | null
   ) => {
     if (oldVNode === null) {
       newVNode.dom = hostCreateComment((newVNode.children as string) || "");
 
-      const typedDOM = newVNode.dom as RenderElement;
+      const typedDOM = newVNode.dom as HostRenderNode;
 
       typedDOM.__vnode__ = newVNode;
 
       hostInsert(typedDOM, container, anchor);
+    } else {
+      newVNode.dom = oldVNode.dom;
     }
   };
 
   const processFragment = (
     oldVNode: VNode | null,
     newVNode: VNode,
-    container: RenderElement,
-    anchor: RenderElement | null,
+    container: HostRenderElement,
+    anchor: HostRenderNode | null,
     parentComponent: ComponentInstance | null,
     isSVG: boolean
   ) => {
+    const fragmentStartAnchor = (newVNode.dom = oldVNode?.dom
+      ? oldVNode.dom
+      : hostCreateComment("start fragment"));
+    const fragmentEndAnchor = (newVNode.anchor = oldVNode?.anchor
+      ? oldVNode.anchor
+      : hostCreateComment("end fragment"));
+
     if (oldVNode === null) {
+      hostInsert(fragmentStartAnchor, container, anchor);
+      hostInsert(fragmentEndAnchor, container, anchor);
       mountChildren(
         newVNode.children as VNodeChild[],
         container,
-        anchor,
+        fragmentEndAnchor,
         parentComponent,
         isSVG
       );
     } else {
-      patchChildren(
-        oldVNode,
-        newVNode,
-        container,
-        anchor,
-        parentComponent,
-        isSVG
-      );
+      patchChildren(oldVNode, newVNode, container, fragmentEndAnchor, parentComponent, isSVG);
     }
   };
 
   const processText = (
     oldVNode: VNode | null,
     newVNode: VNode,
-    container: RenderElement,
-    anchor: RenderElement | null
+    container: HostRenderElement,
+    anchor: HostRenderNode | null
   ) => {
     if (oldVNode) {
       // update
       newVNode.dom = oldVNode.dom;
       if (newVNode.children !== oldVNode.children) {
-        const typedDOM = newVNode.dom as Text;
+        const typedDOM = newVNode.dom as HostRenderNode;
         hostSetText(typedDOM, newVNode.children as string);
       }
     } else {
       // mount
       newVNode.dom = hostCreateText(newVNode.children as string);
-      const typedDOM = newVNode.dom as Text;
+      const typedDOM = newVNode.dom as HostRenderNode;
       hostInsert(typedDOM, container, anchor);
     }
   };
@@ -478,90 +506,23 @@ export const createRenderer = (rendererOptions: RendererOptions) => {
   const processComponent = (
     oldVNode: VNode | null,
     newVNode: VNode,
-    container: RenderElement,
-    anchor: RenderElement | null,
+    container: HostRenderElement,
+    anchor: HostRenderNode | null,
     parentComponent: ComponentInstance | null,
     isSVG: boolean
   ) => {
     if (oldVNode === null) {
       mountComponent(newVNode, container, anchor, parentComponent, isSVG);
     } else {
-      patchComponent();
+      updateComponent(oldVNode, newVNode);
     }
   };
 
-  const _patch = (
-    oldVNode: VNode | null,
-    newVNode: VNode,
-    container: RenderElement,
-    anchor: RenderElement | null = null,
-    parentComponent: ComponentInstance | null = null,
-    isSVG = false
-  ) => {
-    const { type, shapeFlag } = newVNode;
-
-    switch (type) {
-      case MyVue_Comment:
-        processComment(oldVNode, newVNode, container, anchor);
-        break;
-      case MyVue_Fragment:
-        processFragment(
-          oldVNode,
-          newVNode,
-          container,
-          anchor,
-          parentComponent,
-          isSVG
-        );
-        break;
-      case MyVue_Text:
-        processText(oldVNode, newVNode, container, anchor);
-        break;
-      default:
-        if (shapeFlag & ShapeFlags.ELEMENT) {
-          processElement(
-            oldVNode,
-            newVNode,
-            container,
-            anchor,
-            parentComponent,
-            isSVG
-          );
-        } else if (shapeFlag & ShapeFlags.COMPONENT) {
-          processComponent(
-            oldVNode,
-            newVNode,
-            container,
-            anchor,
-            parentComponent,
-            isSVG
-          );
-        }
-    }
+  const move = (vnode: VNode, container: HostRenderElement, anchor: HostRenderNode | null) => {
+    void 0;
   };
 
-  const patch = (
-    oldVNode: VNode | null,
-    newVNode: VNode,
-    container: RenderElement,
-    anchor: RenderElement | null = null,
-    parentComponent: ComponentInstance | null = null,
-    isSVG = false
-  ) => {
-    if (oldVNode === newVNode) return;
-
-    if (oldVNode && !isSameVNodeType(oldVNode, newVNode)) {
-      unmount(oldVNode, parentComponent);
-      oldVNode = null;
-    }
-
-    _patch(oldVNode, newVNode, container, anchor, parentComponent, isSVG);
-  };
-
-  const unmount = (
-    oldVNode: VNode,
-    parentComponent: ComponentInstance | null = null
-  ) => {
+  const unmount = (oldVNode: VNode, parentComponent: ComponentInstance | null = null) => {
     const { type, shapeFlag, children } = oldVNode;
     switch (type) {
       case MyVue_Comment:
@@ -582,12 +543,61 @@ export const createRenderer = (rendererOptions: RendererOptions) => {
     }
   };
 
-  const render = (vnode: VNode, container: RenderElement) => {
-    patch(container.__vnode__ || null, vnode, container);
+  const getNextHostNode = (vnode: VNode): HostRenderNode | null => {
+    if (vnode.component) {
+      return getNextHostNode(vnode.component.child as VNode);
+    } else {
+      return hostNextSibling((vnode.anchor || vnode.dom) as HostRenderNode);
+    }
+  };
+
+  const patch = (
+    oldVNode: VNode | null,
+    newVNode: VNode,
+    container: HostRenderElement,
+    anchor: HostRenderNode | null = null,
+    parentComponent: ComponentInstance | null = null,
+    isSVG = false
+  ) => {
+    if (oldVNode === newVNode) return;
+
+    if (oldVNode && !isSameVNodeType(oldVNode, newVNode)) {
+      anchor = getNextHostNode(oldVNode);
+      unmount(oldVNode, parentComponent);
+      oldVNode = null;
+    }
+
+    const { type, shapeFlag } = newVNode;
+
+    switch (type) {
+      case MyVue_Comment:
+        processComment(oldVNode, newVNode, container, anchor);
+        break;
+      case MyVue_Fragment:
+        processFragment(oldVNode, newVNode, container, anchor, parentComponent, isSVG);
+        break;
+      case MyVue_Text:
+        processText(oldVNode, newVNode, container, anchor);
+        break;
+      default:
+        if (shapeFlag & ShapeFlags.ELEMENT) {
+          processElement(oldVNode, newVNode, container, anchor, parentComponent, isSVG);
+        } else if (shapeFlag & ShapeFlags.COMPONENT) {
+          processComponent(oldVNode, newVNode, container, anchor, parentComponent, isSVG);
+        }
+    }
+  };
+
+  const render = (vnode: VNode, container: HostRenderElement) => {
+    if (vnode === null) {
+      if (container.__vnode__) unmount(container.__vnode__, null);
+    } else {
+      patch(container.__vnode__ || null, vnode, container, null, null);
+    }
     container.__vnode__ = vnode;
   };
 
   return {
     render,
   };
-};
+}

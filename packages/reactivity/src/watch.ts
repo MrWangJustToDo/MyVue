@@ -27,10 +27,7 @@ function traversal<T = unknown>(target: T, set = new Set()): T {
   }
 }
 
-export function watch<T = unknown>(
-  source: WatchSource<T>,
-  cb: WatchCallback<T>
-) {
+export function watch<T = unknown>(source: WatchSource<T>, cb: WatchCallback<T>) {
   let effectAction: () => T | void = () => void 0;
 
   if (isReactive(source)) {

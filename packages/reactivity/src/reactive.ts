@@ -19,12 +19,7 @@ export function reactive<T>(target: T) {
 }
 
 type Primitive = string | number | boolean | bigint | symbol | undefined | null;
-type Builtin =
-  | Primitive
-  | ((...args: unknown[]) => unknown)
-  | Date
-  | Error
-  | RegExp;
+type Builtin = Primitive | ((...args: unknown[]) => unknown) | Date | Error | RegExp;
 
 export type DeepReadonly<T> = T extends Builtin
   ? T
@@ -51,9 +46,7 @@ export type DeepReadonly<T> = T extends Builtin
 export function readonly<T>(target: T) {
   if (isObject(target)) {
     if (isReadonly(target)) return target as DeepReadonly<UnwrapNestedRefs<T>>;
-    return createReactiveWithCache(target, false, true) as DeepReadonly<
-      UnwrapNestedRefs<T>
-    >;
+    return createReactiveWithCache(target, false, true) as DeepReadonly<UnwrapNestedRefs<T>>;
   } else {
     throw new Error("readonly() only accept a object value");
   }
@@ -61,8 +54,7 @@ export function readonly<T>(target: T) {
 
 export function shallowReactive<T>(target: T) {
   if (isObject(target)) {
-    if (isReactive(target) && isShallow(target))
-      return target as UnwrapNestedRefs<T>;
+    if (isReactive(target) && isShallow(target)) return target as UnwrapNestedRefs<T>;
     return createReactiveWithCache(target, true, false) as UnwrapNestedRefs<T>;
   } else {
     throw new Error("shallowReactive() only accept a object value");
@@ -82,9 +74,7 @@ export function isReactive(target: unknown): target is Record<string, unknown> {
   return isObject(target) && !!target[ReactiveFlags.Reactive_key];
 }
 
-export function isReadonly(
-  target: unknown
-): target is Readonly<Record<string, unknown>> {
+export function isReadonly(target: unknown): target is Readonly<Record<string, unknown>> {
   return isObject(target) && !!target[ReactiveFlags.Readonly_key];
 }
 
@@ -97,9 +87,7 @@ export function isProxy(target: unknown): target is Record<string, unknown> {
 }
 
 export function toReactive<T extends Builtin>(value: T): T;
-export function toReactive<T extends Record<string, unknown>>(
-  value: T
-): UnwrapNestedRefs<T>;
+export function toReactive<T extends Record<string, unknown>>(value: T): UnwrapNestedRefs<T>;
 export function toReactive<T>(value: T): UnwrapNestedRefs<T> | T {
   return isObject(value) ? reactive(value) : value;
 }

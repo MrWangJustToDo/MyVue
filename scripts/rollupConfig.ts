@@ -12,20 +12,15 @@ const checkFileExist = (path: string) =>
     .then(() => true)
     .catch(() => false);
 
-const transformBuildOptions = (
-  options: RollupOptions,
-  relativePath: string
-) => {
-  if (
-    typeof options.input === "string" &&
-    !options.input.startsWith(relativePath)
-  ) {
+const transformBuildOptions = (options: RollupOptions, relativePath: string) => {
+  const optionArray: RollupOptions[] = [];
+  if (typeof options.input === "string" && !options.input.startsWith(relativePath)) {
     options.input = resolve(relativePath, options.input);
   }
   if (options.output) {
-    options.output = Array.isArray(options.output)
-      ? options.output
-      : [options.output];
+    options.output = Array.isArray(options.output) ? options.output : [options.output];
+    const umdConfig = options.output.find((output) => output.format === "umd");
+    const otherConfig = options.output.filter((output) => output.format !== "umd");
     options.output = options.output.map((output) => {
       if (output.dir && !output.dir.startsWith(relativePath)) {
         output.dir = resolve(relativePath, output.dir);
@@ -35,8 +30,18 @@ const transformBuildOptions = (
       }
       return output;
     });
+    optionArray.push({
+      input: options.input,
+      output: otherConfig,
+    });
+    if (umdConfig) {
+      optionArray.push({
+        input: options.input,
+        output: [umdConfig],
+      });
+    }
   }
-  return options;
+  return optionArray;
 };
 
 const defaultBuildOptions: RollupOptions = {
@@ -80,42 +85,43 @@ export const getRollupConfig = async (packageName: string) => {
     rollupConfig = packageFileObject["buildOptions"] as RollupOptions;
   }
 
-  rollupConfig = transformBuildOptions(rollupConfig, relativePath);
-
-  rollupConfig.plugins = [
-    nodeResolve(),
-    commonjs({ exclude: "node_modules" }),
-    typescript({
-      composite: true,
-      declaration: true,
-      declarationMap: true,
-      emitDeclarationOnly: true,
-      outputToFilesystem: false,
-      cacheDir: resolve(relativePath, ".cache"),
-      tsconfig: resolve(relativePath, "tsconfig.json"),
-      declarationDir: resolve(relativePath, "dist/types"),
-    }),
-  ];
-
-  rollupConfig.onwarn = (msg, warn) => {
-    if (!/Circular/.test(msg.message)) {
-      warn(msg);
-    }
-  };
-
-  if (rollupConfig.output) {
-    if (Array.isArray(rollupConfig.output)) {
-      if (rollupConfig.output.every((config) => config.format !== "umd")) {
-        rollupConfig.external = (id) =>
-          id.includes("node_modules") || id.includes("@my-vue/");
-      }
-    } else {
-      if (rollupConfig.output.format !== "umd") {
-        rollupConfig.external = (id) =>
-          id.includes("node_modules") || id.includes("@my-vue/");
-      }
-    }
+  if (!rollupConfig.input) {
+    throw new Error(`current package ${packageName} not have a input config`);
   }
 
-  return rollupConfig;
+  if (!rollupConfig.output) {
+    throw new Error(`current package ${packageName} not have a output config`);
+  }
+
+  const allRollupOptions = transformBuildOptions(rollupConfig, relativePath);
+
+  if (allRollupOptions[0]) {
+    allRollupOptions[0].external = (id) => id.includes("node_modules") || id.includes("@my-vue/");
+  }
+
+  allRollupOptions.forEach((options) => {
+    if (options) {
+      options.plugins = [
+        nodeResolve(),
+        commonjs({ exclude: "node_modules" }),
+        typescript({
+          composite: true,
+          declaration: true,
+          declarationMap: true,
+          emitDeclarationOnly: true,
+          outputToFilesystem: false,
+          cacheDir: resolve(relativePath, ".cache"),
+          tsconfig: resolve(relativePath, "tsconfig.json"),
+          declarationDir: resolve(relativePath, "dist/types"),
+        }),
+      ];
+      options.onwarn = (msg, warn) => {
+        if (!/Circular/.test(msg.message)) {
+          warn(msg);
+        }
+      };
+    }
+  });
+
+  return allRollupOptions;
 };

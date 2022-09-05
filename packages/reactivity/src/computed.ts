@@ -11,9 +11,7 @@ export interface WritableComputedOptions<T> {
   set: ComputedSetter<T>;
 }
 
-export const computed = <T>(
-  getterOrOption: WritableComputedOptions<T> | ComputedGetter<T>
-) => {
+export const computed = <T>(getterOrOption: WritableComputedOptions<T> | ComputedGetter<T>) => {
   let getter: (...args: any[]) => T;
   let setter: (v: T) => void = () => {
     console.warn("current computed is readonly");
@@ -36,10 +34,7 @@ class ComputedRefImpl<T> {
   public readonly [ComputedFlags.Computed_key] = true;
   private readonly _depsSet: Set<ReactiveEffect> = new Set();
 
-  constructor(
-    readonly _getter: () => T,
-    private readonly _setter: (v: T) => void
-  ) {
+  constructor(readonly _getter: () => T, private readonly _setter: (v: T) => void) {
     this._effect = new ReactiveEffect<T>(_getter, () => {
       if (!this._dirty) {
         this._dirty = true;

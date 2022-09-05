@@ -22,12 +22,7 @@ export const patchProps = (
     return;
   }
   if (/^on[^a-z]/.test(key)) {
-    patchEvent(
-      el as EventPatchElement,
-      key,
-      prevValue as EventValue,
-      nextValue as EventValue
-    );
+    patchEvent(el as EventPatchElement, key, prevValue as EventValue, nextValue as EventValue);
     return;
   }
   patchAttrs(el, key, prevValue, nextValue, isSVG);

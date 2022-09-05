@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <script src="../dist/umd/index.js"></script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script>
+      const { h, render } = RuntimeDom;
+
+      const ToggleComponent = {
+        props: {
+          bar: {}
+        },
+
+        render() {
+          console.log('run', this.bar)
+          return this.bar;
+        }
+      }
+
+      const VueComponent = {
+        props: {
+          foo: {}
+        },
+
+        data() {
+          return { time: new Date().toString(), flag: true };
+        },
+
+        render() {
+          console.log(this.flag);
+          // return this.time;
+
+          return h("div", [h("span", ["time", this.time, 3, 4, 5, h('div', {style: {color: 'red'}} , this.foo)]), h(ToggleComponent, {bar: this.flag ? 'ToggleComponent-true' : 'ToggleComponent-false'}), h('button', {onClick: () => (this.flag = !this.flag)}, 'toggle')]);
+        },
+      };
+
+      const props = {foo: 'ggg'}
+
+      render(h(VueComponent, props), app);
+    </script>
+  </body>
+</html>

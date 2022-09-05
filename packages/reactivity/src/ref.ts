@@ -34,9 +34,10 @@ export function toRefs(reactiveValue: ReturnType<typeof reactive> | unknown) {
       if (isArray(reactiveValue)) {
         return reactiveValue.map((_, index) => toRef(reactiveValue, index));
       }
-      return Object.keys(reactiveValue).reduce<
-        Record<string, ReturnType<typeof toRef>>
-      >((p, c) => ({ ...p, [c]: toRef(reactiveValue, c) }), {});
+      return Object.keys(reactiveValue).reduce<Record<string, ReturnType<typeof toRef>>>(
+        (p, c) => ({ ...p, [c]: toRef(reactiveValue, c) }),
+        {}
+      );
     } else {
       throw new Error("expects a reactive object but received a plain object");
     }

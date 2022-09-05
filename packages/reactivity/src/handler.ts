@@ -35,13 +35,7 @@ export const generateArrayProxyHandler = () => {
   ] as const;
 
   // 这些方法会修改数组  同时也会访问length属性，对于数组的操作可能会死循环
-  const noTrackMethodNames = [
-    "push",
-    "pop",
-    "shift",
-    "unshift",
-    "splice",
-  ] as const;
+  const noTrackMethodNames = ["push", "pop", "shift", "unshift", "splice"] as const;
 
   const handlerObject: Partial<
     Record<
@@ -101,15 +95,8 @@ export const generateProxyHandler = (
   };
 };
 
-export const createObjectGetHandler = (
-  isShallow: boolean,
-  isReadOnly: boolean
-) => {
-  return function (
-    target: Record<string, unknown>,
-    key: string | symbol,
-    receiver: unknown
-  ) {
+export const createObjectGetHandler = (isShallow: boolean, isReadOnly: boolean) => {
+  return function (target: Record<string, unknown>, key: string | symbol, receiver: unknown) {
     const res = Reflect.get(target, key, receiver);
 
     if (!isReadOnly) {
@@ -128,15 +115,8 @@ export const createObjectGetHandler = (
   };
 };
 
-export const createArrayGetHandler = (
-  isShallow: boolean,
-  isReadOnly: boolean
-) => {
-  return function (
-    target: unknown[],
-    key: string | symbol | number,
-    receiver: unknown
-  ) {
+export const createArrayGetHandler = (isShallow: boolean, isReadOnly: boolean) => {
+  return function (target: unknown[], key: string | symbol | number, receiver: unknown) {
     if (!isReadOnly && Reflect.has(arrayProxyHandler, key)) {
       return Reflect.get(arrayProxyHandler, key, receiver);
     }
@@ -208,9 +188,7 @@ export const createDeletePropertyHandler = (
   };
 };
 
-export const createHasHandler = (): ProxyHandler<
-  Record<string, unknown>
->["has"] => {
+export const createHasHandler = (): ProxyHandler<Record<string, unknown>>["has"] => {
   return function (target, key) {
     const result = Reflect.has(target, key);
     track(target, "has", key);
@@ -218,9 +196,7 @@ export const createHasHandler = (): ProxyHandler<
   };
 };
 
-export const createOwnKeysHandler = (): ProxyHandler<
-  Record<string, unknown>
->["ownKeys"] => {
+export const createOwnKeysHandler = (): ProxyHandler<Record<string, unknown>>["ownKeys"] => {
   return function (target) {
     track(target, "iterate", isArray(target) ? "length" : "collection");
     return Reflect.ownKeys(target);
@@ -271,9 +247,7 @@ export const createSetHandler = (isShallow: boolean, isReadOnly: boolean) => {
     }
 
     const hadKey =
-      targetIsArray && isInteger(key)
-        ? Number(key) < target.length
-        : Reflect.has(target, key);
+      targetIsArray && isInteger(key) ? Number(key) < target.length : Reflect.has(target, key);
 
     const res = Reflect.set(target, key, value, receiver);
 
