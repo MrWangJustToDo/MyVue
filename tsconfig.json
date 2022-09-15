@@ -8,11 +8,5 @@
     "skipLibCheck": true,
     "pretty": true,
     "types": ["jest", "node"]
-  },
-  "include": [
-    "scripts",
-    "packages/*/src",
-    "packages/*/__tests__",
-    "packages/global.d.ts"
-  ]
+  }
 }

@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
-    <script src="../dist/umd/index.js"></script>
+    <script src="../dist/umd/index.development.js"></script>
   </head>
   <body>
     <div id="app"></div>
@@ -30,6 +30,7 @@
 
         setup(props) {
           const ff = ref(props.foo);
+          console.log(ff);
           const changeFf = (val) => ff.value = val;
           const obj = reactive({jjj: 'kkk'})
           const changeObj = (val) => obj.jjj = val;
@@ -48,8 +49,8 @@
         render() {
           // console.log(this.flag, this.changeFf);
           // return h(Fragment, [1,2,3,4,5])
-          // return h('div', [h("div", [h("span", ["time", this.time, 3, 4, 5, h('div', {style: {color: 'red'}} , this.foo)]), h(ToggleComponent, {bar: this.flag ? 'ToggleComponent-true' : 'ToggleComponent-false'}), h('button', {onClick: () => (this.flag = !this.flag)}, 'toggle')]), h('br'), h('span', this.ff), h('button', {onClick: () => this.changeFf(Math.random())}, 'changeFf'), h('br'), h('span', this.obj.jjj), h('button', {onClick: () => this.changeObj(Math.random())}, 'changeObj')]);
-          return h('div', [this.flag ? h('div', {key: '1'},'flag-true') : h('span', 'span'), h('button', {onClick:() => this.flag = !this.flag, key: '2'}, 'flag')])
+          return h('div', [h("div", [h("span", ["time", this.time, 3, 4, 5, h('div', {style: {color: 'red'}} , this.foo)]), h(ToggleComponent, {bar: this.flag ? 'ToggleComponent-true' : 'ToggleComponent-false'}), h('button', {onClick: () => (this.flag = !this.flag)}, 'toggle')]), h('br'), h('span', this.ff), h('button', {onClick: () => this.changeFf(Math.random())}, 'changeFf'), h('br'), h('span', this.obj.jjj), h('button', {onClick: () => this.changeObj(Math.random())}, 'changeObj')]);
+          // return h('div', [this.flag ? h('div', {key: '1'},'flag-true') : h('span', 'span'), h('button', {onClick:() => this.flag = !this.flag, key: '2'}, 'flag')])
         },
       };
 

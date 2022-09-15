@@ -1,22 +1,6 @@
 /// <reference types="vite/client" />
 
-// Global compile-time constants
-declare let __DEV__: boolean;
-declare let __TEST__: boolean;
-declare let __BROWSER__: boolean;
-declare let __GLOBAL__: boolean;
-declare let __ESM_BUNDLER__: boolean;
-declare let __ESM_BROWSER__: boolean;
-declare let __NODE_JS__: boolean;
-declare let __SSR__: boolean;
-declare let __COMMIT__: string;
-declare let __VERSION__: string;
-declare let __COMPAT__: boolean;
-
-// Feature flags
-declare let __FEATURE_OPTIONS_API__: boolean;
-declare let __FEATURE_PROD_DEVTOOLS__: boolean;
-declare let __FEATURE_SUSPENSE__: boolean;
+declare const __DEV__: boolean;
 
 // for tests
 declare namespace jest {

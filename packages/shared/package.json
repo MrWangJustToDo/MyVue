@@ -2,15 +2,19 @@
   "name": "@my-vue/shared",
   "description": "@my-vue/shared",
   "version": "0.0.1",
-  "main": "./dist/cjs/index.js",
+  "main": "index.js",
   "module": "./dist/esm/index.js",
   "types": "./dist/types/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "index.js"
   ],
   "exports": {
-    "import": "./dist/esm/index.js",
-    "require": "./dist/cjs/index.js"
+    ".": {
+      "require": "./index.js",
+      "import": "./dist/esm/index.js",
+      "default": "./index.js"
+    }
   },
   "buildOptions": {
     "input": "./src/index.ts",
@@ -18,6 +22,7 @@
       {
         "dir": "./dist",
         "entryFileNames": "cjs/index.js",
+        "multiple": true,
         "format": "cjs",
         "sourcemap": true
       },

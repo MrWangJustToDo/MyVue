@@ -19,7 +19,7 @@ module.exports = {
     node: true,
     jest: true,
   },
-  ignorePatterns: [".eslintrc.js", "dist", "node_modules", "jest.config.js"],
+  ignorePatterns: ["dist", "node_modules", "**/*.js"],
   rules: {
     "@typescript-eslint/interface-name-prefix": "off",
     "@typescript-eslint/explicit-function-return-type": "off",
@@ -40,14 +40,7 @@ module.exports = {
     "import/order": [
       "error",
       {
-        groups: [
-          ["builtin", "external"],
-          "internal",
-          "parent",
-          "sibling",
-          "index",
-          "type",
-        ],
+        groups: [["builtin", "external"], "internal", "parent", "sibling", "index", "type"],
         "newlines-between": "always",
         alphabetize: { order: "asc", caseInsensitive: true },
       },

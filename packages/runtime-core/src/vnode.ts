@@ -28,7 +28,7 @@ export type VNodeChildren = Array<VNodeChild> | VNodeChild;
 export type VNode<HostNode = HostRenderNode, HostElement = HostRenderElement> = {
   type: VNodeType;
   key: string | number | symbol | null;
-  dom: HostNode | null;
+  node: HostNode | null;
   anchor: HostNode | null;
   target: HostElement | null;
   props: Record<string, unknown>;
@@ -65,7 +65,7 @@ export const createVNode = (
   const vnode: VNode = {
     [VNodeFlags.VNode_key]: true,
     [VNodeFlags.Skip_key]: true,
-    dom: null,
+    node: null,
     anchor: null,
     target: null,
     component: null,

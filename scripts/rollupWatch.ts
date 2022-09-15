@@ -2,10 +2,10 @@ import { watch as rollup } from "rollup";
 
 import { getRollupConfig } from "./rollupConfig";
 
-import type { packages } from "./type";
+import type { Mode, packages } from "./type";
 import type { RollupOptions } from "rollup";
 
-const watch = (packageName: string, rollupOptions: RollupOptions, isUMD: boolean) => {
+const watch = (packageName: string, rollupOptions: RollupOptions, mode: Mode, isUMD: boolean) => {
   rollupOptions.watch = {
     buildDelay: 300,
     exclude: ["node_modules"],
@@ -16,30 +16,38 @@ const watch = (packageName: string, rollupOptions: RollupOptions, isUMD: boolean
 
   watcher.on("event", (event) => {
     if (event.code === "BUNDLE_START") {
-      console.log(`[watch] start build package ${packageName} ${isUMD ? "in umd format" : ""}`);
+      console.log(
+        `[watch] start build package ${packageName} with ${mode} mode ${
+          isUMD ? "in umd format" : ""
+        }`
+      );
     }
     if (event.code === "BUNDLE_END") {
-      console.log(`[watch] package ${packageName} ${isUMD ? "in umd format" : ""} build success!`);
+      console.log(
+        `[watch] package ${packageName} with ${mode} mode ${
+          isUMD ? "in umd format" : ""
+        } build success!`
+      );
     }
     if (event.code === "ERROR") {
       console.log(
-        `[watch] package ${packageName} ${isUMD ? "in umd format" : ""} build error, ${
-          event.error.stack
-        }`
+        `[watch] package ${packageName} with ${mode} mode ${
+          isUMD ? "in umd format" : ""
+        } build error \n ${event.error.stack}`
       );
     }
   });
 };
 
 const rollupWatch = async (packageName: packages) => {
-  const [otherBuild, umdBuild] = await getRollupConfig(packageName);
+  const { allOtherDev, allUMDDev } = await getRollupConfig(packageName);
 
-  if (otherBuild) {
-    watch(packageName, otherBuild, false);
+  if (allOtherDev) {
+    watch(packageName, allOtherDev, "development", false);
   }
 
-  if (umdBuild) {
-    watch(packageName, umdBuild, true);
+  if (allUMDDev) {
+    watch(packageName, allUMDDev, "development", true);
   }
 };
 

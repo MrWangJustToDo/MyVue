@@ -2,15 +2,19 @@
   "name": "@my-vue/runtime-core",
   "description": "@my-vue/runtime-core",
   "version": "0.0.1",
-  "main": "./dist/cjs/index.js",
+  "main": "index.js",
   "module": "./dist/esm/index.js",
   "types": "./dist/types/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "index.js"
   ],
   "exports": {
-    "import": "./dist/esm/index.js",
-    "require": "./dist/cjs/index.js"
+    ".": {
+      "require": "./index.js",
+      "import": "./dist/esm/index.js",
+      "default": "./index.js"
+    }
   },
   "buildOptions": {
     "input": "./src/index.ts",
@@ -19,6 +23,7 @@
         "dir": "./dist",
         "entryFileNames": "cjs/index.js",
         "format": "cjs",
+        "multiple": true,
         "sourcemap": true
       },
       {
@@ -31,6 +36,7 @@
         "dir": "./dist",
         "entryFileNames": "umd/index.js",
         "format": "umd",
+        "multiple": true,
         "name": "RuntimeCore",
         "sourcemap": true
       }

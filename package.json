@@ -5,12 +5,14 @@
   "scripts": {
     "dev": "ts-node ./scripts/rollupWatch.ts",
     "build": "ts-node ./scripts/rollupBuild.ts",
-    "test": "jest"
+    "test": "jest",
+    "clean": "pnpm -p -r -c exec rm -rf dist",
+    "purge": "pnpm -p -r -c exec rm -rf node_modules"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^22.0.2",
     "@rollup/plugin-node-resolve": "^13.3.0",
-    "@rollup/plugin-typescript": "^8.4.0",
+    "@rollup/plugin-replace": "^4.0.0",
     "@types/jest": "^28.1.8",
     "@types/lodash": "^4.14.184",
     "@types/node": "^18.7.14",
@@ -30,6 +32,7 @@
     "lodash": "^4.17.21",
     "prettier": "^2.7.1",
     "rollup": "^2.79.0",
+    "rollup-plugin-typescript2": "^0.34.0",
     "ts-jest": "^28.0.8",
     "ts-node": "^10.9.1",
     "tsconfig-paths": "^4.1.0",

@@ -218,9 +218,7 @@ describe("reactivity/reactive", () => {
   test("non-observable values", () => {
     const assertValue = (value: any) => {
       reactive(value);
-      expect(
-        `value cannot be made reactive: ${String(value)}`
-      ).toHaveBeenWarnedLast();
+      expect(`value cannot be made reactive: ${String(value)}`).toHaveBeenWarnedLast();
     };
 
     // number
