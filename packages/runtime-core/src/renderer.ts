@@ -61,6 +61,12 @@ export function createRenderer(rendererOptions: RendererOptions): { render: Rend
     children.forEach((child) => unmount(child, parentComponent));
   };
 
+  const unmountFragment = (vnode: VNode, parentComponent: ComponentInstance | null) => {
+    vnode.node && hostRemove(vnode.node);
+    vnode.anchor && hostRemove(vnode.anchor);
+    unmountChildren(vnode.children as VNode[], parentComponent);
+  };
+
   const unmountStatic = (vnode: VNode) => {
     if (vnode.node) {
       hostRemove(vnode.node);
@@ -103,12 +109,12 @@ export function createRenderer(rendererOptions: RendererOptions): { render: Rend
 
     vnode.node = hostCreateElement(type as string, isSVG);
 
-    const typedDOM = vnode.node as HostRenderNode;
+    const typedNode = vnode.node as HostRenderNode;
 
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
-      hostSetElementText(typedDOM, children as string);
+      hostSetElementText(typedNode, children as string);
     } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      mountChildren(children as VNodeChild[], typedDOM, null, parentComponent, isSVG);
+      mountChildren(children as VNodeChild[], typedNode, null, parentComponent, isSVG);
     }
 
     for (const key in props) {
@@ -117,9 +123,9 @@ export function createRenderer(rendererOptions: RendererOptions): { render: Rend
       }
     }
 
-    typedDOM.__vnode__ = vnode;
+    typedNode.__vnode__ = vnode;
 
-    hostInsert(typedDOM, container, anchor);
+    hostInsert(typedNode, container, anchor);
   };
 
   const mountComponent = (
@@ -389,13 +395,13 @@ export function createRenderer(rendererOptions: RendererOptions): { render: Rend
 
     const nextProps = newVNode.props;
 
-    const typedDOM = newVNode.node as HostRenderNode;
+    const typedNode = newVNode.node as HostRenderNode;
 
-    patchChildren(oldVNode, newVNode, typedDOM, null, parentComponent, isSVG);
+    patchChildren(oldVNode, newVNode, typedNode, null, parentComponent, isSVG);
 
-    patchProps(typedDOM, newVNode, prevProps, nextProps, isSVG);
+    patchProps(typedNode, newVNode, prevProps, nextProps, isSVG);
 
-    typedDOM.__vnode__ = newVNode;
+    typedNode.__vnode__ = newVNode;
   };
 
   const updateComponentPreRender = (
@@ -443,13 +449,17 @@ export function createRenderer(rendererOptions: RendererOptions): { render: Rend
     if (oldVNode === null) {
       newVNode.node = hostCreateComment((newVNode.children as string) || "");
 
-      const typedDOM = newVNode.node as HostRenderNode;
+      const typedNode = newVNode.node as HostRenderNode;
 
-      typedDOM.__vnode__ = newVNode;
+      typedNode.__vnode__ = newVNode;
 
-      hostInsert(typedDOM, container, anchor);
+      hostInsert(typedNode, container, anchor);
     } else {
       newVNode.node = oldVNode.node;
+
+      const typedNode = newVNode.node as HostRenderNode;
+
+      typedNode.__vnode__ = newVNode;
     }
   };
 
@@ -464,9 +474,14 @@ export function createRenderer(rendererOptions: RendererOptions): { render: Rend
     const fragmentStartAnchor = (newVNode.node = oldVNode?.node
       ? oldVNode.node
       : hostCreateComment("start fragment"));
+
+    fragmentStartAnchor.__vnode__ = newVNode;
+
     const fragmentEndAnchor = (newVNode.anchor = oldVNode?.anchor
       ? oldVNode.anchor
       : hostCreateComment("end fragment"));
+
+    fragmentEndAnchor.__vnode__ = newVNode;
 
     if (oldVNode === null) {
       hostInsert(fragmentStartAnchor, container, anchor);
@@ -493,14 +508,14 @@ export function createRenderer(rendererOptions: RendererOptions): { render: Rend
       // update
       newVNode.node = oldVNode.node;
       if (newVNode.children !== oldVNode.children) {
-        const typedDOM = newVNode.node as HostRenderNode;
-        hostSetText(typedDOM, newVNode.children as string);
+        const typedNode = newVNode.node as HostRenderNode;
+        hostSetText(typedNode, newVNode.children as string);
       }
     } else {
       // mount
       newVNode.node = hostCreateText(newVNode.children as string);
-      const typedDOM = newVNode.node as HostRenderNode;
-      hostInsert(typedDOM, container, anchor);
+      const typedNode = newVNode.node as HostRenderNode;
+      hostInsert(typedNode, container, anchor);
     }
   };
 
@@ -524,16 +539,14 @@ export function createRenderer(rendererOptions: RendererOptions): { render: Rend
   };
 
   const unmount = (oldVNode: VNode, parentComponent: ComponentInstance | null = null) => {
-    const { type, shapeFlag, children } = oldVNode;
+    const { type, shapeFlag } = oldVNode;
     switch (type) {
+      case MyVue_Text:
       case MyVue_Comment:
         unmountStatic(oldVNode);
         break;
       case MyVue_Fragment:
-        unmountChildren(children as VNode[], parentComponent);
-        break;
-      case MyVue_Text:
-        unmountStatic(oldVNode);
+        unmountFragment(oldVNode, parentComponent);
         break;
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
@@ -589,11 +602,11 @@ export function createRenderer(rendererOptions: RendererOptions): { render: Rend
     }
   };
 
-  const render = (vnode: VNode, container: HostRenderElement) => {
+  const render = (vnode: VNode, container: HostRenderElement, isSVG = false) => {
     if (vnode === null) {
       if (container.__vnode__) unmount(container.__vnode__, null);
     } else {
-      patch(container.__vnode__ || null, vnode, container, null, null);
+      patch(container.__vnode__ || null, vnode, container, null, null, isSVG);
     }
     container.__vnode__ = vnode;
   };
