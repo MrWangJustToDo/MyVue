@@ -10,15 +10,8 @@
   <body>
     <div id="app"></div>
     <script>
-      const {
-        reactive,
-        effect,
-        shallowReactive,
-        readonly,
-        shallowReadonly,
-        computed,
-        ref,
-      } = Reactive;
+      const { reactive, effect, shallowReactive, readonly, shallowReadonly, computed, ref } =
+        Reactive;
 
       // const d = { a: 1, b: 2, c: 3, d: { a: 1, b: 2 } };
 
@@ -86,7 +79,7 @@
 
       let index = -1;
       effect(() => {
-        console.log('run')
+        console.log("run");
         index = arr.indexOf(obj);
       });
       arr.reverse();

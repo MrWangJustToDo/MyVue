@@ -14,7 +14,7 @@
 
       const VueComponent = {
         props: {
-          foo: {}
+          foo: {},
         },
 
         data() {
@@ -22,18 +22,20 @@
         },
 
         render() {
-
           setTimeout(() => {
             this.time = new Date().toString();
             this.time = Math.random();
           }, 1000);
           // return this.time;
 
-          return h("div", h("span", ["time", this.time, 3, 4, 5, h('div', {style: {color: 'red'}} , this.foo)]));
+          return h(
+            "div",
+            h("span", ["time", this.time, 3, 4, 5, h("div", { style: { color: "red" } }, this.foo)])
+          );
         },
       };
 
-      const props = {foo: 'ggg'}
+      const props = { foo: "ggg" };
 
       render(h(VueComponent, props), app);
     </script>

@@ -7,7 +7,8 @@
     "build": "ts-node ./scripts/rollupBuild.ts",
     "test": "jest",
     "clean": "pnpm -p -r -c exec rm -rf dist",
-    "purge": "pnpm -p -r -c exec rm -rf node_modules"
+    "purge": "pnpm -p -r -c exec rm -rf node_modules",
+    "prettier": "prettier --ignore-path .prettierignore --write ."
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^22.0.2",

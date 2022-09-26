@@ -507,14 +507,22 @@ export function createRenderer(rendererOptions: RendererOptions): { render: Rend
     if (oldVNode) {
       // update
       newVNode.node = oldVNode.node;
+
+      const typedNode = newVNode.node as HostRenderNode;
+
       if (newVNode.children !== oldVNode.children) {
-        const typedNode = newVNode.node as HostRenderNode;
         hostSetText(typedNode, newVNode.children as string);
       }
+
+      typedNode.__vnode__ = newVNode;
     } else {
       // mount
       newVNode.node = hostCreateText(newVNode.children as string);
+
       const typedNode = newVNode.node as HostRenderNode;
+
+      typedNode.__vnode__ = newVNode;
+
       hostInsert(typedNode, container, anchor);
     }
   };
@@ -584,14 +592,14 @@ export function createRenderer(rendererOptions: RendererOptions): { render: Rend
     const { type, shapeFlag } = newVNode;
 
     switch (type) {
+      case MyVue_Text:
+        processText(oldVNode, newVNode, container, anchor);
+        break;
       case MyVue_Comment:
         processComment(oldVNode, newVNode, container, anchor);
         break;
       case MyVue_Fragment:
         processFragment(oldVNode, newVNode, container, anchor, parentComponent, isSVG);
-        break;
-      case MyVue_Text:
-        processText(oldVNode, newVNode, container, anchor);
         break;
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {

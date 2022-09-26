@@ -10,8 +10,7 @@
   <body>
     <div id="app"></div>
     <script>
-      const { reactive, watch, ref, effect, toRefs, proxyRefs, computed } =
-        Reactive;
+      const { reactive, watch, ref, effect, toRefs, proxyRefs, computed } = Reactive;
 
       const a = ref("张");
       const b = ref("三");
@@ -23,6 +22,8 @@
 
       const fullName = computed(() => data.a + ":" + data.b);
 
+      const fullNameObject = proxyRefs({ fullName });
+
       effect(() => {
         console.log("data.a", data.a);
         console.log("data.b", data.b);
@@ -33,8 +34,8 @@
       });
 
       effect(() => {
-        console.log(testRef.c)
-      })
+        console.log(testRef.c);
+      });
     </script>
   </body>
 </html>
